@@ -32,12 +32,12 @@ const createUser = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  const user = await UserRepository.findByUsername(username);
+  const user = await UserRepository.findByEmail(email);
 
   if(!user) {
-    return res.status(401).json({ status: 'fail', message: 'username atau password salah'})
+    return res.status(401).json({ status: 'fail', message: 'email atau password salah'})
   }
 
   const isPasswordMatch = await PasswordHelper.comparePassword(password, user.password);
@@ -45,7 +45,7 @@ const loginUser = async (req, res) => {
   if (!isPasswordMatch) {
       return res.status(401).json({
         status: 'fail',
-        message: 'username atau password salah'
+        message: 'email atau password salah'
       });
   }
 
@@ -56,7 +56,8 @@ const loginUser = async (req, res) => {
         user: {
           id: user.id,
           fullname: user.fullname,
-          username: user.username
+          phone: user.phone,
+          email: user.email
         }
       }
   })
