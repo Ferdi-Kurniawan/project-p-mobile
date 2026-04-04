@@ -1,0 +1,3 @@
+backend/.env
+backend/src/generated
+backend/node_modules
