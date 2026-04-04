@@ -3,12 +3,12 @@ import PasswordHelper from '../helpers/bcrypt.js';
 
 const createUser = async (req, res) => {
   try {
-    const { fullname, username, password } = req.body;
+    const { fullname, phone, email, password } = req.body;
 
-    const checkUsername = await UserRepository.findByUsername(username);
+    const checkEmail = await UserRepository.findByEmail(email);
 
-    if(checkUsername) {
-      return res.status(409).json({ status: "fail", message: "Username Sudah Di Gunakan" })
+    if(checkEmail) {
+      return res.status(409).json({ status: "fail", message: "Email Sudah Di Gunakan" })
     }
 
     const passwordHash = await PasswordHelper.hashPassword(password)
@@ -16,7 +16,8 @@ const createUser = async (req, res) => {
     // Panggil fungsi dari repository, BUKAN dari prisma langsung
     const users = await UserRepository.create({
       fullname,
-      username,
+      phone,
+      email,
       password: passwordHash 
     });
 

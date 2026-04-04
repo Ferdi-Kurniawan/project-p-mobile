@@ -9,10 +9,10 @@ class UserRepository {
   }
 
   // cek username exist
-  async findByUsername(username) {
+  async findByEmail(email) {
     return await prisma.user.findUnique({
         where : {
-            username
+            email
         }
     })
   }
