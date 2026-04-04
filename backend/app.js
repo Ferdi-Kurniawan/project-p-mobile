@@ -6,7 +6,7 @@ import userRoutes from './src/routes/user.route.js';
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors)
+app.use(cors());
 
 app.use('/users', userRoutes);
 
@@ -29,6 +29,7 @@ app.use((err, req, res, next) => {
 const port = process.env.PORT;
 const host = process.env.HOST;
 
-app.listen(port, () => {
+
+app.listen(port, '0.0.0.0', () => {
     console.log(`http://${host}:${port}/`)
 })
