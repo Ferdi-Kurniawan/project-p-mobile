@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
+import '../services/api_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -52,24 +52,29 @@ class _RegisterPageState extends State<RegisterPage>
 
   void _togglePassword() => setState(() => _obscurePassword = !_obscurePassword);
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      // Simpan data user ke list global
-      registeredUsers.add({
-        'username': _usernameController.text.trim(),
-        'fullname': _fullnameController.text.trim(),
-        'password': _passwordController.text.trim(),
-      });
+void _submit() async {
+  if (_formKey.currentState!.validate()) {
+    try {
+      await ApiService.registerUser(
+        fullname: _fullnameController.text.trim(),
+        username: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registrasi pengguna berhasil!')),
+        const SnackBar(content: Text('Registrasi berhasil ke server!')),
       );
 
       _usernameController.clear();
       _fullnameController.clear();
       _passwordController.clear();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
