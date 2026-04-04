@@ -1,4 +1,4 @@
-import UserRepository from './register.repository.js'
+import UserRepository from './users.repository.js'
 import PasswordHelper from '../helpers/bcrypt.js';
 
 const createUser = async (req, res) => {
@@ -22,7 +22,7 @@ const createUser = async (req, res) => {
     });
 
 
-    res.status(200).json({ message: 'User berhasil dibuat', data: {
+    res.status(200).json({ message: 'user berhasil dibuat', data: {
       users
     } });
   } catch (error) {
@@ -30,6 +30,37 @@ const createUser = async (req, res) => {
     res.status(500).json({ error: 'Gagal membuat user' });
   }
 };
+
+const loginUser = async (req, res) => {
+  const { username, password } = req.body;
+
+  const user = await UserRepository.findByUsername(username);
+
+  if(!user) {
+    return res.status(401).json({ status: 'fail', message: 'username atau password salah'})
+  }
+
+  const isPasswordMatch = await PasswordHelper.comparePassword(password, user.password);
+
+  if (!isPasswordMatch) {
+      return res.status(401).json({
+        status: 'fail',
+        message: 'username atau password salah'
+      });
+  }
+
+  return res.status(200).json({
+      status: 'success',
+      message: 'login berhasil',
+      data: {
+        user: {
+          id: user.id,
+          fullname: user.fullname,
+          username: user.username
+        }
+      }
+  })
+}
 
 const getAllUsers = async (req, res) => {
   try {
@@ -43,5 +74,6 @@ const getAllUsers = async (req, res) => {
 
 export  {
     createUser,
+    loginUser,
     getAllUsers
 }

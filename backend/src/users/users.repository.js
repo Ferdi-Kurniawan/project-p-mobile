@@ -1,22 +1,26 @@
 import prisma from "../config/database.js";
 
 class UserRepository {
+  constructor() {
+    this._prisma = prisma;
+  }
   // Menambahkan user baru
   async create(userData) {
-    return await prisma.user.create({
+    return await this._prisma.user.create({
       data: userData,
     });
   }
 
   // cek username exist
   async findByEmail(email) {
-    return await prisma.user.findUnique({
+    return await this._prisma.user.findUnique({
         where : {
             email
         }
     })
   }
 
+  
 
   // Mengambil semua user
   async findAll() {

@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+backend/.env
+backend/src/generated
+backend/node_modules
+=======
 # Miscellaneous
 *.class
 *.log
@@ -45,3 +50,4 @@ app.*.map.json
 /android/app/release
 
 /lib/generated/prisma
+>>>>>>> b2eb1fbc10a72d572d14a8e892b77650df152906

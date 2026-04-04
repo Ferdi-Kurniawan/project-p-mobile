@@ -1,10 +1,12 @@
 import { Router } from 'express'
-import { createUser } from '../register/register.controller.js';
+import { createUser, loginUser } from '../users/users.controller.js';
 import validate from '../middleware/validate.js';
-import { registerUserSchema } from '../register/register.shcema.js';
+import { loginUserSchema, registerUserSchema } from '../users/users.shcema.js';
+
 
 const userRoutes = Router()
 
 userRoutes.post('/', validate(registerUserSchema), createUser)
+userRoutes.post('/login', validate(loginUserSchema), loginUser)
 
 export default userRoutes;
