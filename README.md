@@ -2,4 +2,4 @@
 
 # Planned New feature 
 1. captcha
-2. authentication with JWR for Verification Users
+2. authentication with JWT and  for Verification Users
