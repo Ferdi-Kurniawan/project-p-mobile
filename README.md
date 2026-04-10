@@ -1,5 +1,6 @@
 # flutter_application_2
 
+<<<<<<< HEAD
 A new Flutter project.
 
 ## Getting Started
@@ -28,3 +29,8 @@ NOTES : Gunakan gitbash agar mudah
 5. buka gitbash baru
 6. click icon + pilih gitbash
 7. setelah bisa lanjutkan kerjaan kalian
+=======
+# Planned New feature 
+1. captcha
+2. authentication with JWT and  for Verification Users
+>>>>>>> 935b278d1480b93c3d629040f7ede5962b39685a
