@@ -17,6 +17,12 @@ enum Role {
   ADMIN
 }
 
+enum Status {
+  PENDING
+  PAID
+  CHECKED_IN
+}
+
 model User {
   id String @id @default(uuid())
   fullname  String
@@ -24,6 +30,54 @@ model User {
   email String @unique
   password String 
   role     Role   @default(USER)
-  // Petakan model ini ke tabel bernama "users" di database
+
+  bookings Booking[]
   @@map("users")
+}
+
+model Category {
+  id String @id @default(uuid())
+  // example tiket wisata, tiket penginapan, tiket fasilitas
+  name String
+
+  products Product[]
+  @@map("categories")
+} 
+
+model Product {
+  id String @id @default(uuid())
+  category_id String
+  name String
+  price Decimal
+
+  category Category @relation(fields: [category_id], references: [id])
+  booking_items BookingItem[]
+  @@map("products")
+}
+
+model Booking {
+  id String @id @default(uuid())
+  user_id String
+  status Status @default(PENDING)
+  total_price Decimal
+  start_date DateTime 
+  end_date DateTime
+  createdAt    DateTime @default(now())
+
+  items BookingItem[]
+  user User @relation(fields: [user_id], references: [id])
+  @@map("bookings")
+}
+
+model BookingItem {
+  id        String @id @default(uuid())
+  booking_id String
+  product_id String
+  quantity  Int
+  price     Decimal 
+
+  // Definisi Relasi
+  booking   Booking @relation(fields: [booking_id], references: [id])
+  product   Product @relation(fields: [product_id], references: [id])
+  @@map("booking_items") // Tambahan agar konsisten
 }

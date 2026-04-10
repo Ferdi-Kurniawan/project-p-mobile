@@ -1,5 +1,6 @@
 import UserRepository from './users.repository.js'
 import PasswordHelper from '../helpers/bcrypt.js';
+import setSession from '../helpers/session.js';
 
 const createUser = async (req, res) => {
   try {
@@ -48,6 +49,8 @@ const loginUser = async (req, res) => {
         message: 'email atau password salah'
       });
   }
+
+  await setSession(req, user);
 
   return res.status(200).json({
       status: 'success',
