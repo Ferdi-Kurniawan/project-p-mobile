@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import userRoutes from './src/routes/user.route.js';
+import categoryRoutes from './src/routes/category.route.js';
 
 const app = express();
 app.use(express.json());
@@ -20,6 +21,7 @@ app.use(session({
 }))
 
 app.use('/users', userRoutes);
+app.use('/category', categoryRoutes);
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
