@@ -1,5 +1,6 @@
 import UserRepository from './users.repository.js'
 import PasswordHelper from '../helpers/bcrypt.js';
+import setSession from '../helpers/session.js';
 
 const createUser = async (req, res) => {
   try {
@@ -32,6 +33,7 @@ const createUser = async (req, res) => {
 };
 
 const loginUser = async (req, res) => {
+  try {
   const { email, password } = req.body;
 
   const user = await UserRepository.findByEmail(email);
@@ -49,6 +51,8 @@ const loginUser = async (req, res) => {
       });
   }
 
+  await setSession(req, user);
+
   return res.status(200).json({
       status: 'success',
       message: 'login berhasil',
@@ -61,6 +65,10 @@ const loginUser = async (req, res) => {
         }
       }
   })
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Gagal melakukan login' });
+  }
 }
 
 const getAllUsers = async (req, res) => {
