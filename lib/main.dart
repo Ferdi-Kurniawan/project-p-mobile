@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'pages/register_page.dart';
 import 'pages/register_admin_page.dart';
+import 'pages/login_user.dart';
+import 'pages/home_page.dart';
 
 // List global untuk menyimpan data user sementara
 List<Map<String, String>> registeredUsers = [];
@@ -25,8 +27,14 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/user',
+      
+      // 1. UBAH INI: Pastikan route awal adalah login
+      initialRoute: '/login', 
+      
       routes: {
+        // 2. Gunakan LoginPage sebagai gerbang utama
+        '/login': (context) => const LoginPage(), 
+        '/home': (context) => const HomePage(),
         '/user': (context) => const RegisterPage(),
         '/admin': (context) => const RegisterAdminPage(),
       },
