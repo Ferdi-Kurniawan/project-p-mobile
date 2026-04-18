@@ -1,5 +1,6 @@
 # flutter_application_2
 
+<<<<<<< HEAD
 A new Flutter project.
 
 ## Getting Started
@@ -15,3 +16,16 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+# Cara Menjalankan Databasenya agar bisa di gunakan
+
+NOTES : Gunakan gitbash agar mudah
+
+1. git pull origin main
+2. cd backend/ setalah itu enter, PENTING pastikan di folder backend
+3. npx prisma generate
+3. npx prisma db push
+4. npm run start
+5. buka gitbash baru
+6. click icon + pilih gitbash
+7. setelah bisa lanjutkan kerjaan kalian

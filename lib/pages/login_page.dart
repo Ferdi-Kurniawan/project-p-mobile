@@ -1,48 +1,38 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  final fullname = TextEditingController();
-  final phone = TextEditingController();
+class _LoginPageState extends State<LoginPage> {
   final email = TextEditingController();
   final password = TextEditingController();
 
   bool isLoading = false;
 
-  void register() async {
-    if (fullname.text.isEmpty ||
-        phone.text.isEmpty ||
-        email.text.isEmpty ||
-        password.text.isEmpty) {
+  void login() async {
+    if (email.text.isEmpty || password.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Semua field wajib diisi")),
+        const SnackBar(content: Text("Email & Password wajib diisi")),
       );
       return;
     }
 
     setState(() => isLoading = true);
 
-    bool success = await ApiService.register(
-      fullname.text,
-      phone.text,
-      email.text,
-      password.text,
-    );
+    final user = await ApiService.login(email.text, password.text);
 
     setState(() => isLoading = false);
 
-    if (success) {
-      Navigator.pop(context);
+    if (user != null) {
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Register gagal")),
+        const SnackBar(content: Text("Login gagal")),
       );
     }
   }
@@ -78,13 +68,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.person_add_alt_1,
+                    const Icon(Icons.travel_explore,
                         size: 70, color: Colors.deepOrange),
 
                     const SizedBox(height: 10),
 
                     const Text(
-                      "Create Account",
+                      "Welcome Back",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -92,32 +82,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
 
                     const SizedBox(height: 20),
-
-                    TextField(
-                      controller: fullname,
-                      decoration: InputDecoration(
-                        labelText: "Full Name",
-                        prefixIcon: const Icon(Icons.person),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    TextField(
-                      controller: phone,
-                      decoration: InputDecoration(
-                        labelText: "Nomor HP",
-                        prefixIcon: const Icon(Icons.phone),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 15),
 
                     TextField(
                       controller: email,
@@ -150,7 +114,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: isLoading ? null : register,
+                        onPressed: isLoading ? null : login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepOrange,
                           shape: RoundedRectangleBorder(
@@ -161,13 +125,17 @@ class _RegisterPageState extends State<RegisterPage> {
                             ? const CircularProgressIndicator(
                                 color: Colors.white,
                               )
-                            : const Text("REGISTER"),
+                            : const Text(
+                                "LOGIN",
+                                style: TextStyle(fontSize: 16),
+                              ),
                       ),
                     ),
 
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Sudah punya akun? Login"),
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/register'),
+                      child: const Text("Belum punya akun? Register"),
                     )
                   ],
                 ),

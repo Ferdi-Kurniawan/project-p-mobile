@@ -2,30 +2,63 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static Future<void> registerUser({
-    required String fullname,
-    required String password,
-    required String email, 
-    required String phone,
-  }) async {
-    final url = Uri.parse('http://localhost:3000/users'); 
+  static const String baseUrl = "http://127.0.0.1:3000";
 
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "fullname": fullname,
-        "email": email,
-        "phone": phone,
-        "password": password,
-      }),
-    );
+  // ================= REGISTER =================
+  static Future<bool> register(
+    String fullname,
+    String phone,
+    String email,
+    String password,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/users"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "fullname": fullname,
+          "phone": phone,
+          "email": email,
+          "password": password,
+        }),
+      );
 
-    // Jika status bukan 200 atau 201 (berarti error 409 atau 500)
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      final Map<String, dynamic> errorData = jsonDecode(response.body);
-      // Lempar pesan dari backend (misal: "Email sudah digunakan")
-      throw errorData['message'] ?? "Gagal mendaftar";
+      print("REGISTER STATUS: ${response.statusCode}");
+      print("REGISTER BODY: ${response.body}");
+
+      return response.statusCode == 201;
+    } catch (e) {
+      print("ERROR REGISTER: $e");
+      return false;
     }
+  }
+
+  // ================= LOGIN =================
+  static Future<Map<String, dynamic>?> login(
+    String email,
+    String password,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/users/login"), // 🔥 INI YANG PENTING
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": email,
+          "password": password,
+        }),
+      );
+
+      print("LOGIN STATUS: ${response.statusCode}");
+      print("LOGIN BODY: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data["data"]["user"];
+      }
+    } catch (e) {
+      print("ERROR LOGIN: $e");
+    }
+
+    return null;
   }
 }
