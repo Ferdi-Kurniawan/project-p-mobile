@@ -48,7 +48,7 @@ model Product {
   id String @id @default(uuid())
   category_id String
   name String
-  price Decimal
+  price Int
 
   category Category @relation(fields: [category_id], references: [id])
   booking_items BookingItem[]
@@ -59,7 +59,7 @@ model Booking {
   id String @id @default(uuid())
   user_id String
   status Status @default(PENDING)
-  total_price Decimal
+  total_price Int
   start_date DateTime 
   end_date DateTime
   createdAt    DateTime @default(now())
@@ -74,7 +74,7 @@ model BookingItem {
   booking_id String
   product_id String
   quantity  Int
-  price     Decimal 
+  price     Int 
 
   // Definisi Relasi
   booking   Booking @relation(fields: [booking_id], references: [id])
