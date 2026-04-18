@@ -72,10 +72,17 @@ const loginUser = async (req, res) => {
     }
   })
   } catch (error) {
+<<<<<<< HEAD
     console.error(error)
     res.status(500).json({ error: 'Gagal melakukan login' })
   } 
 };
+=======
+    console.error(error);
+    res.status(500).json({ error: 'Gagal melakukan login' });
+  }
+}
+>>>>>>> ff0ec1be46f7f2f76a617c854703995958485486
 
 const getAllUsers = async (req, res) => {
   try {

@@ -28,4 +28,13 @@ NOTES : Gunakan gitbash agar mudah
 4. npm run start
 5. buka gitbash baru
 6. click icon + pilih gitbash
+<<<<<<< HEAD
 7. setelah bisa lanjutkan kerjaan kalian
+=======
+7. setelah bisa lanjutkan kerjaan kalian
+=======
+# Planned New feature 
+1. captcha
+2. authentication with JWT and  for Verification Users
+>>>>>>> 935b278d1480b93c3d629040f7ede5962b39685a
+>>>>>>> ff0ec1be46f7f2f76a617c854703995958485486

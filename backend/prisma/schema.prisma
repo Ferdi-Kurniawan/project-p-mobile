@@ -48,7 +48,11 @@ model Product {
   id String @id @default(uuid())
   category_id String
   name String
+<<<<<<< HEAD
   price Decimal
+=======
+  price Int
+>>>>>>> ff0ec1be46f7f2f76a617c854703995958485486
 
   category Category @relation(fields: [category_id], references: [id])
   booking_items BookingItem[]
@@ -59,7 +63,11 @@ model Booking {
   id String @id @default(uuid())
   user_id String
   status Status @default(PENDING)
+<<<<<<< HEAD
   total_price Decimal
+=======
+  total_price Int
+>>>>>>> ff0ec1be46f7f2f76a617c854703995958485486
   start_date DateTime 
   end_date DateTime
   createdAt    DateTime @default(now())
@@ -74,7 +82,11 @@ model BookingItem {
   booking_id String
   product_id String
   quantity  Int
+<<<<<<< HEAD
   price     Decimal 
+=======
+  price     Int 
+>>>>>>> ff0ec1be46f7f2f76a617c854703995958485486
 
   // Definisi Relasi
   booking   Booking @relation(fields: [booking_id], references: [id])
