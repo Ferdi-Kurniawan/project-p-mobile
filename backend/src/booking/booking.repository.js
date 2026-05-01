@@ -1,30 +1,52 @@
 import prisma from "../config/database.js";
 
 class BookingRepository {
-  async createBooking(userId, startDate, endDate, items) {
-    const calculatedTotalPrice = items.reduce((total, item) => {
-      return total + item.price * item.quantity;
-    }, 0);
+  constructor() {
+    this._prisma = prisma;
+  }
 
-    return await prisma.booking.create({
-      data: {
-        user_id: userId,
-        start_date: new Date(startDate),
-        end_date: new Date(endDate),
-        total_price: calculatedTotalPrice,
+  async createBookingWithTransaction(
+    userId,
+    startDate,
+    endDate,
+    calculatedTotalPrice,
+    items,
+  ) {
+    return await this._prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const updateResult = await tx.product.updateMany({
+          where: {
+            id: item.productId,
+            stock: { gte: item.quantity },
+          },
+          data: {
+            stock: { decrement: item.quantity },
+          },
+        });
 
-        items: {
-          create: items.map((item) => ({
-            product_id: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+        if (updateResult.count === 0) {
+          throw new Error(`INSUFFICIENT_STOCK_${item.productId}`);
+        }
+      }
+
+      return await tx.booking.create({
+        data: {
+          user_id: userId,
+          start_date: new Date(startDate),
+          end_date: new Date(endDate),
+          total_price: calculatedTotalPrice,
+          items: {
+            create: items.map((item) => ({
+              product_id: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          },
         },
-      },
-
-      include: {
-        items: true,
-      },
+        include: { items: true },
+      });
     });
   }
 }
+
+export default new BookingRepository();

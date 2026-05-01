@@ -19,8 +19,10 @@ enum Role {
 
 enum Status {
   PENDING
+  PENDING_VERIFICATION
   PAID
-  CHECKED_IN
+  CANCELLED
+  EXPIRED
 }
 
 model User {
@@ -60,15 +62,24 @@ model Product {
 }
 
 model Booking {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   user_id     String
-  status      Status   @default(PENDING)
+  status      Status @default(PENDING)
   total_price Int
-  start_date  DateTime
-  end_date    DateTime
-  createdAt   DateTime @default(now())
 
-  // kata kunci relation untuk menghubungkan dengan model BookingItem
+  payment_method String?
+  payment_proof  String?
+  paidAt         DateTime?
+
+  ticket_code   String    @unique @default(cuid())
+  is_checked_in Boolean   @default(false)
+  checked_in_at DateTime?
+
+  start_date DateTime
+  end_date   DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   items BookingItem[]
   user  User          @relation(fields: [user_id], references: [id])
 
@@ -82,9 +93,8 @@ model BookingItem {
   quantity   Int
   price      Int
 
-  // Definisi Relasi
   booking Booking @relation(fields: [booking_id], references: [id])
   product Product @relation(fields: [product_id], references: [id])
 
-  @@map("booking_items") // Tambahan agar konsisten
+  @@map("booking_items")
 }
