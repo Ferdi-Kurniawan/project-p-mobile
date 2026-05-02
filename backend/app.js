@@ -3,11 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import userRoutes from './src/routes/user.route.js';
-import categoryRoutes from './src/routes/category.route.js';
-<<<<<<< HEAD
-=======
+import categoryRoutes from './src/routes/category.route.js'
 import routerProduct from './src/routes/product.routes.js';
->>>>>>> ff0ec1be46f7f2f76a617c854703995958485486
 
 const app = express();
 app.use(express.json());
@@ -26,10 +23,9 @@ app.use(session({
 
 app.use('/users', userRoutes);
 app.use('/category', categoryRoutes);
-<<<<<<< HEAD
-=======
+
 app.use('/product', routerProduct)
->>>>>>> ff0ec1be46f7f2f76a617c854703995958485486
+
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
