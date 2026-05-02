@@ -47,6 +47,68 @@ class BookingRepository {
       });
     });
   }
+
+  async getBookingsByUserId(userId) {
+    return await this._prisma.booking.findMany({
+      where: { user_id: userId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true, price: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async getBookingById(bookingId, userId) {
+    return await this._prisma.booking.findUnique({
+      where: { id: bookingId, user_id: userId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true, price: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async getHistoryBookings() {
+    return await this._prisma.booking.findMany({
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true, price: true },
+            },
+          },
+        },
+        user: {
+          select: { fullname: true, email: true, phone: true },
+        },
+      },
+    });
+  }
+
+  async getHistoryBookingById(bookingId) {
+    return await this._prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true, price: true },
+            },
+          },
+        },
+      },
+    });
+  }
 }
 
 export default new BookingRepository();

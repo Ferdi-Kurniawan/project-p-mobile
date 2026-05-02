@@ -4,7 +4,8 @@ import prisma from "../config/database.js";
 
 const createBooking = async (req, res) => {
   try {
-    const { userId, startDate, endDate } = req.body;
+    const userId = req.session.user.id;
+    const { startDate, endDate } = req.body;
     const redisKey = `cart:${userId}`;
 
     const cartData = await client.get(redisKey);
@@ -75,4 +76,87 @@ const createBooking = async (req, res) => {
   }
 };
 
-export { createBooking };
+const getBookings = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const bookings = await bookingRepository.getBookingsByUserId(userId);
+    return res.status(200).json({
+      data: {
+        bookings,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: "Terjadi kesalahan internal pada server.",
+    });
+  }
+};
+
+const getBookingById = async (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const { bookingId } = req.params;
+    const booking = await bookingRepository.getBookingById(bookingId, userId);
+
+    if (!booking) {
+      return res.status(404).json({ error: "Booking tidak ditemukan." });
+    }
+
+    return res.status(200).json({
+      data: {
+        booking,
+      },
+    });
+  } catch (error) {
+    console.error("Database Error:", error);
+    return res.status(500).json({
+      error: "Terjadi kesalahan internal pada server.",
+    });
+  }
+};
+
+const getHistoryBookings = async (req, res) => {
+  try {
+    const bookings = await bookingRepository.getHistoryBookings();
+    return res.status(200).json({
+      data: {
+        bookings,
+      },
+    });
+  } catch (error) {
+    console.error("Database Error:", error);
+    return res.status(500).json({
+      error: "Terjadi kesalahan internal pada server.",
+    });
+  }
+};
+
+const getHistoryBookingById = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await bookingRepository.getHistoryBookingById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({ error: "Booking tidak ditemukan." });
+    }
+
+    return res.status(200).json({
+      data: {
+        booking,
+      },
+    });
+  } catch (error) {
+    console.error("Database Error:", error);
+    return res.status(500).json({
+      error: "Terjadi kesalahan internal pada server.",
+    });
+  }
+};
+
+export {
+  createBooking,
+  getBookings,
+  getHistoryBookings,
+  getHistoryBookingById,
+  getBookingById,
+};

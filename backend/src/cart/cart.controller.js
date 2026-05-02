@@ -116,6 +116,15 @@ class CartController {
       const { productId } = req.body;
       const redisKey = `cart:${userId}`;
 
+      const product = await this._prisma.product.findUnique({
+        where: { id: productId },
+        select: { stock: true },
+      });
+
+      if (!product) {
+        return res.status(404).json({ error: "Produk tidak ditemukan." });
+      }
+
       let cartData = await client.get(redisKey);
       if (!cartData) {
         return res.status(404).json({ error: "Keranjang tidak ditemukan." });
