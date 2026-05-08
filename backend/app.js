@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
@@ -7,20 +6,18 @@ import userRoutes from "./src/routes/user.route.js";
 import categoryRoutes from "./src/routes/category.route.js";
 import routerProduct from "./src/routes/product.routes.js";
 import routerBooking from "./src/routes/booking.routes.js";
-=======
-import 'dotenv/config';
-import express from 'express'; 
-import cors from 'cors';
-import session from 'express-session';
-import userRoutes from './src/routes/user.route.js';
-import categoryRoutes from './src/routes/category.route.js'
-import routerProduct from './src/routes/product.routes.js';
->>>>>>> main
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
+
 app.use(
   session({
     secret: process.env.SECRET_SESSION,
@@ -29,23 +26,17 @@ app.use(
     cookie: {
       secure: false,
       httpOnly: true,
+      sameSite: "lax", 
       maxAge: 24 * 60 * 60 * 1000,
     },
-  }),
+  })
 );
 
-<<<<<<< HEAD
 app.use("/users", userRoutes);
 app.use("/category", categoryRoutes);
 app.use("/product", routerProduct);
+app.use("/products", routerProduct); 
 app.use("/booking", routerBooking);
-=======
-app.use('/users', userRoutes);
-app.use('/category', categoryRoutes);
-
-app.use('/product', routerProduct)
->>>>>>> main
-
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
