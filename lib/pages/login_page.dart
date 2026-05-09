@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -29,6 +30,10 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = false);
 
     if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('role', user['role']);
+      await prefs.setString('fullname', user['fullname']);
+      await prefs.setString('email', user['email']);
       Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

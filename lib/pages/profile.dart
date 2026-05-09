@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({super.key, required this.userData});
 
+  final Map<String, dynamic> userData;
+  
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool isAdmin = false;
   bool _notifEnabled = true;
   bool _darkMode = false;
   String _selectedLang = 'Indonesia';
@@ -19,7 +20,7 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: const Color(0xFFF7F7F7),
       appBar: AppBar(
         title: Text(
-          isAdmin ? "Profile Admin" : "Profile Pengguna",
+          "Profile Pengguna",
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -29,56 +30,47 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: Colors.deepOrange.shade800,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: Colors.white),
-            onPressed: () {
-              setState(() {
-                isAdmin = !isAdmin;
-              });
-            },
-          )
-        ],
       ),
-      body: isAdmin ? _buildAdminProfile() : _buildUserProfile(),
+      body: _buildUserProfile(),
     );
   }
 
-  // ================= ADMIN =================
-  Widget _buildAdminProfile() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        children: [
-          _buildHeader("Admin Wisata", "admin@wisata.com"),
-          const SizedBox(height: 24),
-          _buildSectionLabel("Manajemen Konten"),
-          _buildMenuCard(Icons.add_location_alt, "Tambah Desa Wisata", subtitle: "Tambahkan destinasi baru"),
-          _buildMenuCard(Icons.edit_location, "Edit Data Desa", subtitle: "Perbarui informasi destinasi"),
-          _buildMenuCard(Icons.delete_outline, "Hapus Data Desa", subtitle: "Hapus destinasi yang tidak aktif", isDestructive: true),
-          const SizedBox(height: 30),
-        ],
-      ),
-    );
-  }
-
-  // ================= USER =================
   Widget _buildUserProfile() {
+
+    final String fullname = widget.userData['fullname'];
+    final String email = widget.userData['email'];
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
         children: [
-          _buildHeader("Pengguna", "user@gmail.com"),
+          _buildHeader(fullname, email),
           const SizedBox(height: 24),
 
           _buildSectionLabel("Aktivitas"),
-          _buildMenuCard(Icons.favorite_outline, "Wisata Favorit", subtitle: "Lihat daftar favorit kamu"),
-          _buildMenuCard(Icons.receipt_long_outlined, "Riwayat Tiket", subtitle: "Cek tiket yang pernah dibeli"),
+          _buildMenuCard(
+            Icons.favorite_outline,
+            "Wisata Favorit",
+            subtitle: "Lihat daftar favorit kamu",
+          ),
+          _buildMenuCard(
+            Icons.receipt_long_outlined,
+            "Riwayat Tiket",
+            subtitle: "Cek tiket yang pernah dibeli",
+          ),
 
           const SizedBox(height: 8),
           _buildSectionLabel("Pengaturan Akun"),
-          _buildMenuCard(Icons.person_outline_rounded, "Edit Profil", subtitle: "Ubah nama dan informasi akun"),
-          _buildMenuCard(Icons.lock_outline_rounded, "Ubah Password", subtitle: "Perbarui kata sandi kamu"),
+          _buildMenuCard(
+            Icons.person_outline_rounded,
+            "Edit Profil",
+            subtitle: "Ubah nama dan informasi akun",
+          ),
+          _buildMenuCard(
+            Icons.lock_outline_rounded,
+            "Ubah Password",
+            subtitle: "Perbarui kata sandi kamu",
+          ),
 
           const SizedBox(height: 8),
           _buildSectionLabel("Preferensi"),
@@ -100,9 +92,22 @@ class _ProfilePageState extends State<ProfilePage> {
 
           const SizedBox(height: 8),
           _buildSectionLabel("Lainnya"),
-          _buildMenuCard(Icons.help_outline_rounded, "Bantuan & FAQ", subtitle: "Pusat bantuan pengguna"),
-          _buildMenuCard(Icons.info_outline_rounded, "Tentang Aplikasi", subtitle: "Versi 1.0.0"),
-          _buildMenuCard(Icons.logout_rounded, "Logout", subtitle: "Keluar dari akun", isDestructive: true),
+          _buildMenuCard(
+            Icons.help_outline_rounded,
+            "Bantuan & FAQ",
+            subtitle: "Pusat bantuan pengguna",
+          ),
+          _buildMenuCard(
+            Icons.info_outline_rounded,
+            "Tentang Aplikasi",
+            subtitle: "Versi 1.0.0",
+          ),
+          _buildMenuCard(
+            Icons.logout_rounded,
+            "Logout",
+            subtitle: "Keluar dari akun",
+            isDestructive: true,
+          ),
 
           const SizedBox(height: 36),
         ],
@@ -125,10 +130,7 @@ class _ProfilePageState extends State<ProfilePage> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Colors.deepOrange.shade800,
-                Colors.orange.shade400,
-              ],
+              colors: [Colors.deepOrange.shade800, Colors.orange.shade400],
             ),
           ),
         ),
@@ -154,7 +156,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   radius: 52,
                   backgroundColor: Colors.deepOrange.shade100,
                   child: Icon(
-                    isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                    Icons.person_rounded,
                     size: 52,
                     color: Colors.deepOrange.shade700,
                   ),
@@ -182,18 +184,15 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 12),
               // Badge role
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.deepOrange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.deepOrange.withOpacity(0.25)),
-                ),
-                child: Text(
-                  isAdmin ? "🛡️ Administrator" : "👤 Pengguna",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.deepOrange.shade700,
+                  border: Border.all(
+                    color: Colors.deepOrange.withOpacity(0.25),
                   ),
                 ),
               ),
@@ -225,8 +224,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildMenuCard(IconData icon, String title,
-      {String? subtitle, bool isDestructive = false}) {
+  Widget _buildMenuCard(
+    IconData icon,
+    String title, {
+    String? subtitle,
+    bool isDestructive = false,
+  }) {
     final color = isDestructive ? Colors.red.shade400 : Colors.deepOrange;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -259,7 +262,9 @@ class _ProfilePageState extends State<ProfilePage> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: isDestructive ? Colors.red.shade400 : const Color(0xFF1A1A1A),
+            color: isDestructive
+                ? Colors.red.shade400
+                : const Color(0xFF1A1A1A),
           ),
         ),
         subtitle: subtitle != null
@@ -281,8 +286,13 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildToggleCard(IconData icon, String title,
-      {String? subtitle, required bool value, required ValueChanged<bool> onChanged}) {
+  Widget _buildToggleCard(
+    IconData icon,
+    String title, {
+    String? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -318,10 +328,7 @@ class _ProfilePageState extends State<ProfilePage> {
         subtitle: subtitle != null
             ? Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade400,
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
               )
             : null,
         trailing: Switch(
@@ -356,7 +363,11 @@ class _ProfilePageState extends State<ProfilePage> {
             color: Colors.deepOrange.withOpacity(0.09),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(Icons.language_rounded, color: Colors.deepOrange, size: 20),
+          child: const Icon(
+            Icons.language_rounded,
+            color: Colors.deepOrange,
+            size: 20,
+          ),
         ),
         title: const Text(
           "Bahasa",
@@ -373,7 +384,10 @@ class _ProfilePageState extends State<ProfilePage> {
         trailing: DropdownButtonHideUnderline(
           child: DropdownButton<String>(
             value: _selectedLang,
-            icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.grey.shade400),
+            icon: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.grey.shade400,
+            ),
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,

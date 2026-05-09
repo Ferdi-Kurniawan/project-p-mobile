@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../services/api_service.dart';
 import 'tiket_page.dart';
 import 'cart.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
@@ -25,6 +25,10 @@ class _HomePageState extends State<HomePage>
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
   String role = "";
+  Map<String, dynamic> userData = {
+    'fullname': 'Pengguna',
+    'email': 'user@gmail.com',
+  };
 
   final List<Map<String, String>> _villages = [
     {
@@ -73,6 +77,10 @@ class _HomePageState extends State<HomePage>
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       role = prefs.getString('role') ?? '';
+      userData = ApiService.userData ?? {
+        'fullname': prefs.getString('fullname') ?? 'Pengguna',
+        'email': prefs.getString('email') ?? 'user@gmail.com',
+      };
     });
   }
 
@@ -121,10 +129,10 @@ class _HomePageState extends State<HomePage>
       case 3:
         return _buildBookingTab();
       case 4:
-        return role == 'admin'
+        return role.toLowerCase() == 'admin'
             ? const ProfileAdminPage()
-            : const ProfilePage();
-      default:
+            : ProfilePage(userData: userData);
+          default:
         return _buildMainHomeContent();
     }
   }
