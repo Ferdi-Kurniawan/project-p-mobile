@@ -12,15 +12,17 @@ class CartController {
   async addItem(req, res) {
     try {
       const userId = req.session.user.id;
-
       const { productId, quantity } = req.body;
 
+      console.log(`[CART] Adding item: userId=${userId}, productId=${productId}, qty=${quantity}`);
+
       const product = await this._prisma.product.findUnique({
-        where: { id: productId },
+        where: { id: String(productId) },
         select: { stock: true },
       });
 
       if (!product) {
+        console.log(`[CART] Product not found: ${productId}`);
         return res.status(404).json({ error: "Produk tidak ditemukan." });
       }
 
@@ -32,11 +34,11 @@ class CartController {
 
       const redisKey = `cart:${userId}`;
 
-      let cart = await client.get(redisKey);
-      cart = cart ? JSON.parse(cart) : [];
+      let cartData = await client.get(redisKey);
+      let cart = cartData ? JSON.parse(cartData) : [];
 
       const existingItemIndex = cart.findIndex(
-        (item) => item.productId === productId,
+        (item) => String(item.productId) === String(productId),
       );
 
       if (existingItemIndex >= 0) {
@@ -46,12 +48,13 @@ class CartController {
       }
 
       await client.setEx(redisKey, 86400, JSON.stringify(cart));
+      console.log(`[CART] Saved to Redis: ${redisKey} -> ${JSON.stringify(cart)}`);
 
       return res
         .status(200)
         .json({ message: "Barang berhasil ditambahkan ke keranjang", cart });
     } catch (error) {
-      console.error(error);
+      console.error("[CART ERROR] addItem:", error);
       return res.status(500).json({ error: "Gagal menyimpan keranjang." });
     }
   }
@@ -61,8 +64,12 @@ class CartController {
       const userId = req.session.user.id;
       const redisKey = `cart:${userId}`;
 
+      console.log(`[CART] Fetching cart for userId=${userId}`);
+
       let cartData = await client.get(redisKey);
       let cartItems = cartData ? JSON.parse(cartData) : [];
+
+      console.log(`[CART] Raw items from Redis:`, cartItems);
 
       if (cartItems.length === 0) {
         return res.status(200).json({
@@ -72,20 +79,19 @@ class CartController {
         });
       }
 
-      let totalCartPrice = 0;
-
       const enrichedCart = await Promise.all(
         cartItems.map(async (item) => {
-          // Cari data produk di DB
           const product = await this._prisma.product.findUnique({
-            where: { id: item.productId },
+            where: { id: String(item.productId) },
             select: { name: true, price: true },
           });
 
-          if (!product) return null;
+          if (!product) {
+            console.log(`[CART] Product in Redis not found in DB: ${item.productId}`);
+            return null;
+          }
 
           const subtotal = product.price * item.quantity;
-          totalCartPrice += subtotal;
 
           return {
             productId: item.productId,
@@ -98,6 +104,9 @@ class CartController {
       );
 
       const finalCart = enrichedCart.filter((item) => item !== null);
+      const totalCartPrice = finalCart.reduce((sum, item) => sum + item.subtotal, 0);
+
+      console.log(`[CART] Final enriched cart:`, finalCart);
 
       return res.status(200).json({
         message: "Berhasil mengambil keranjang",
@@ -105,7 +114,7 @@ class CartController {
         total_cart_price: totalCartPrice,
       });
     } catch (error) {
-      console.error(error);
+      console.error("[CART ERROR] getCart:", error);
       return res.status(500).json({ error: "Gagal mengambil keranjang." });
     }
   }
@@ -117,7 +126,7 @@ class CartController {
       const redisKey = `cart:${userId}`;
 
       const product = await this._prisma.product.findUnique({
-        where: { id: productId },
+        where: { id: String(productId) },
         select: { stock: true },
       });
 
@@ -133,7 +142,7 @@ class CartController {
       let cartItems = JSON.parse(cartData);
 
       const updatedCart = cartItems.filter(
-        (item) => item.productId !== productId,
+        (item) => String(item.productId) !== String(productId),
       );
 
       if (updatedCart.length === 0) {

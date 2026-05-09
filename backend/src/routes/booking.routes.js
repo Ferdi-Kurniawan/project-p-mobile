@@ -11,7 +11,6 @@ import express from "express";
 
 const routerBooking = express.Router();
 
-// Booking routes
 routerBooking.post("/", authMiddleware([]), createBooking);
 routerBooking.get("/", authMiddleware([]), getBookings);
 routerBooking.get("/history", authMiddleware(["ADMIN"]), getHistoryBookings);
@@ -20,8 +19,6 @@ routerBooking.get(
   authMiddleware(["ADMIN"]),
   getHistoryBookingById,
 );
-routerBooking.get("/:bookingId", authMiddleware([]), getBookingById);
-
 // Cart routes
 routerBooking.post("/add-item", authMiddleware([]), cartController.addItem);
 routerBooking.get("/cart", authMiddleware([]), cartController.getCart);
@@ -30,7 +27,8 @@ routerBooking.post(
   authMiddleware([]),
   cartController.removeItem,
 );
-
 routerBooking.post("/clear-cart", authMiddleware([]), cartController.clearCart);
+
+routerBooking.get("/:bookingId", authMiddleware([]), getBookingById);
 
 export default routerBooking;

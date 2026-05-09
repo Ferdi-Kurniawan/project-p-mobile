@@ -75,6 +75,7 @@ class _HomePageState extends State<HomePage>
 
   void loadRole() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       role = prefs.getString('role') ?? '';
       userData = ApiService.userData ?? {
@@ -311,6 +312,7 @@ class _HomePageState extends State<HomePage>
 
     // Jika ada item di keranjang, langsung tampilkan BookingPage
     return BookingPage(
+      bookingId: '',
       items: items.toList(),
       tanggalMulai: DateTime.now(),
       tanggalSelesai: DateTime.now().add(const Duration(days: 1)),

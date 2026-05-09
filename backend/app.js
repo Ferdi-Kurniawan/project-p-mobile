@@ -11,6 +11,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: true,
@@ -26,7 +28,7 @@ app.use(
     cookie: {
       secure: false,
       httpOnly: true,
-      sameSite: "lax", 
+      sameSite: "none", 
       maxAge: 24 * 60 * 60 * 1000,
     },
   })
@@ -35,7 +37,6 @@ app.use(
 app.use("/users", userRoutes);
 app.use("/category", categoryRoutes);
 app.use("/product", routerProduct);
-app.use("/products", routerProduct); 
 app.use("/booking", routerBooking);
 
 app.use((err, req, res, next) => {

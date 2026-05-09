@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.userData});
@@ -107,6 +108,27 @@ class _ProfilePageState extends State<ProfilePage> {
             "Logout",
             subtitle: "Keluar dari akun",
             isDestructive: true,
+            onTap: () async {
+              // Tampilkan dialog konfirmasi
+              bool? confirm = await showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Logout"),
+                  content: const Text("Apakah Anda yakin ingin keluar?"),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
+                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Logout", style: TextStyle(color: Colors.red))),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                final success = await ApiService.logout();
+                if (success) {
+                  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                }
+              }
+            },
           ),
 
           const SizedBox(height: 36),
@@ -229,6 +251,7 @@ class _ProfilePageState extends State<ProfilePage> {
     String title, {
     String? subtitle,
     bool isDestructive = false,
+    VoidCallback? onTap,
   }) {
     final color = isDestructive ? Colors.red.shade400 : Colors.deepOrange;
     return Container(
@@ -245,6 +268,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       child: ListTile(
+        onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           width: 42,

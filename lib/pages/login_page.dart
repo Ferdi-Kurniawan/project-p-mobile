@@ -27,6 +27,7 @@ class _LoginPageState extends State<LoginPage> {
 
     final user = await ApiService.login(email.text, password.text);
 
+    if (!mounted) return;
     setState(() => isLoading = false);
 
     if (user != null) {
