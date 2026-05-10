@@ -19,7 +19,6 @@ routerBooking.get(
   authMiddleware(["ADMIN"]),
   getHistoryBookingById,
 );
-// Cart routes
 routerBooking.post("/add-item", authMiddleware([]), cartController.addItem);
 routerBooking.get("/cart", authMiddleware([]), cartController.getCart);
 routerBooking.post(
