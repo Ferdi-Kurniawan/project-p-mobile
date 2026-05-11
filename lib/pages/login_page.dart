@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'profile_admin_page.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../services/api_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -35,30 +39,12 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() => isLoading = false);
 
-    // ================= LOGIN BERHASIL =================
-     if (user != null) {
-
-  print(user);
-
-  // LOGIN ADMIN
-  if (email.text == "admin@gmail.com") {
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const ProfileAdminPage(),
-      ),
-    );
-
-  } else {
-
-    // LOGIN USER BIASA
-    Navigator.pushReplacementNamed(
-      context,
-      '/home',
-    );
-
-  }
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('role', user['role']);
+      await prefs.setString('fullname', user['fullname']);
+      await prefs.setString('email', user['email']);
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
 
       // LOGIN GAGAL

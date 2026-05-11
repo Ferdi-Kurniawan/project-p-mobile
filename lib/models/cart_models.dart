@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class CartItem {
+  final String productId;
   final String name;
   final String loc;
   final String img;
@@ -10,6 +11,7 @@ class CartItem {
   final DateTime addedAt;
 
   CartItem({
+    required this.productId,
     required this.name,
     required this.loc,
     required this.img,
@@ -43,6 +45,7 @@ class CartModel extends ChangeNotifier {
       existing.first.quantity++;
     } else {
       _items.add(CartItem(
+        productId: data['productId'] ?? '',
         name: data['name'] ?? '',
         loc: data['loc'] ?? '',
         img: data['img'] ?? '',

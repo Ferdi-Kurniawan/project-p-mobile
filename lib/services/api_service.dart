@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:http/browser_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_application_2/models/cart_models.dart';
 
 class ApiService {
-  static const baseUrl = "http://localhost:3000";
-
-  static BrowserClient get _client => BrowserClient()..withCredentials = true;
+  static const String baseUrl = "http://127.0.0.1:3000";
+  static Map<String, dynamic>? userData;
 
   // ================= REGISTER =================
   static Future<bool> register(
@@ -15,7 +15,7 @@ class ApiService {
     String password,
   ) async {
     try {
-      final response = await _client.post(
+      final response = await http.post(
         Uri.parse("$baseUrl/users"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -39,7 +39,7 @@ class ApiService {
     String password,
   ) async {
     try {
-      final response = await _client.post(
+      final response = await http.post(
         Uri.parse("$baseUrl/users/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -50,6 +50,7 @@ class ApiService {
       print("LOGIN: ${response.statusCode} ${response.body}");
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        userData = data["data"]["user"];
         return data["data"]["user"];
       }
     } catch (e) {
@@ -61,25 +62,18 @@ class ApiService {
   // ================= GET PRODUCTS =================
   static Future<List<dynamic>> getProducts() async {
     try {
-      final response = await _client.get(
-        Uri.parse("$baseUrl/products"),
-      );
+      final response = await http.get(Uri.parse("$baseUrl/products"));
       print("GET PRODUCTS: ${response.statusCode}");
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Backend return: { "status": "success", "data": { "product": [...] } }
         if (data is Map && data['data'] != null) {
           final inner = data['data'];
           if (inner is Map && inner['product'] != null) {
             return List<dynamic>.from(inner['product']);
           }
-          if (inner is List) {
-            return List<dynamic>.from(inner);
-          }
+          if (inner is List) return List<dynamic>.from(inner);
         }
-        if (data is List) {
-          return List<dynamic>.from(data);
-        }
+        if (data is List) return List<dynamic>.from(data);
       }
     } catch (e) {
       print("GET PRODUCTS ERROR: $e");
@@ -90,13 +84,10 @@ class ApiService {
   // ================= ADD TO CART =================
   static Future<bool> addToCart(String productId, int quantity) async {
     try {
-      final response = await _client.post(
+      final response = await http.post(
         Uri.parse("$baseUrl/booking/add-item"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "productId": productId, // UUID string
-          "quantity": quantity,
-        }),
+        body: jsonEncode({"productId": productId, "quantity": quantity}),
       );
       print("ADD CART STATUS: ${response.statusCode}");
       print("ADD CART BODY: ${response.body}");
@@ -110,23 +101,17 @@ class ApiService {
   // ================= GET CART =================
   static Future<List<Map<String, dynamic>>> getCart() async {
     try {
-      final response = await _client.get(
-        Uri.parse("$baseUrl/booking/cart"),
-      );
+      final response = await http.get(Uri.parse("$baseUrl/booking/cart"));
       print("GET CART: ${response.statusCode}");
-      print("GET CART BODY: ${response.body}");
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Backend return { "cart": [...], "total_cart_price": ... }
         if (data is Map && data['cart'] != null) {
           return List<Map<String, dynamic>>.from(data['cart']);
         }
         if (data is Map && data['data'] != null) {
           return List<Map<String, dynamic>>.from(data['data']);
         }
-        if (data is List) {
-          return List<Map<String, dynamic>>.from(data);
-        }
+        if (data is List) return List<Map<String, dynamic>>.from(data);
       }
     } catch (e) {
       print("GET CART ERROR: $e");
@@ -137,7 +122,7 @@ class ApiService {
   // ================= REMOVE FROM CART =================
   static Future<bool> removeFromCart(String productId) async {
     try {
-      final response = await _client.post(
+      final response = await http.post(
         Uri.parse("$baseUrl/booking/remove-item"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"productId": productId}),
@@ -153,9 +138,8 @@ class ApiService {
   // ================= CLEAR CART =================
   static Future<bool> clearCart() async {
     try {
-      final response = await _client.post(
-        Uri.parse("$baseUrl/booking/clear-cart"),
-      );
+      final response =
+          await http.post(Uri.parse("$baseUrl/booking/clear-cart"));
       print("CLEAR CART: ${response.statusCode}");
       return response.statusCode == 200;
     } catch (e) {
@@ -165,20 +149,15 @@ class ApiService {
   }
 
   // ================= CREATE BOOKING =================
-  // Backend: POST /booking dengan body { startDate, endDate }
-  // Backend ambil cart dari Redis, buat booking, lalu clear cart otomatis
   static Future<Map<String, dynamic>?> createBooking({
     required String startDate,
     required String endDate,
   }) async {
     try {
-      final response = await _client.post(
+      final response = await http.post(
         Uri.parse("$baseUrl/booking"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "startDate": startDate,
-          "endDate": endDate,
-        }),
+        body: jsonEncode({"startDate": startDate, "endDate": endDate}),
       );
       print("CREATE BOOKING STATUS: ${response.statusCode}");
       print("CREATE BOOKING BODY: ${response.body}");
@@ -195,9 +174,7 @@ class ApiService {
   // ================= GET BOOKINGS =================
   static Future<List<dynamic>> getBookings() async {
     try {
-      final response = await _client.get(
-        Uri.parse("$baseUrl/booking"),
-      );
+      final response = await http.get(Uri.parse("$baseUrl/booking"));
       print("GET BOOKINGS: ${response.statusCode}");
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -212,5 +189,38 @@ class ApiService {
       print("GET BOOKINGS ERROR: $e");
     }
     return [];
+  }
+
+  // ================= CHECKOUT =================
+  static Future<bool> checkout(CartModel cart) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final response = await http.post(
+      Uri.parse("$baseUrl/booking"),
+      headers: {
+        "Content-Type": "application/json",
+        if (token != null) "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({
+        "startDate": DateTime.now().toIso8601String(),
+        "endDate":
+            DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+        "userId": userData?['id'],
+        "items": cart.items.map((item) {
+          return {
+            "name": item.name,
+            "price": item.hargaInt,
+            "quantity": item.quantity,
+            "total": item.subtotal,
+            "productId": item.productId,
+          };
+        }).toList(),
+      }),
+    );
+
+    print("CHECKOUT STATUS: ${response.statusCode}");
+    print("CHECKOUT BODY: ${response.body}");
+    return response.statusCode == 201;
   }
 }

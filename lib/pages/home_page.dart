@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../services/api_service.dart';
 import 'tiket_page.dart';
 import 'cart.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
@@ -10,9 +10,7 @@ import 'profile.dart';
 import 'profile_admin_page.dart';
 import 'booking_page.dart';
 
-// ════════════════════════════════════════════════════════
-//  HomePage
-// ════════════════════════════════════════════════════════
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -68,6 +66,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   static const Color _divider       = Color(0xFFE8EDF5);
 
   static const String _heroImage = 'assets/images/pahawang1.jpg';
+
+  Map<String, dynamic> userData = {
+    'fullname': 'Pengguna',
+    'email': 'user@gmail.com',
+  };
 
   final List<Map<String, String>> _villages = [
     {
@@ -196,18 +199,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void loadRole() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() => role = prefs.getString('role') ?? '');
-  }
 
-  void _autoSlide() {
-    if (!mounted) return;
-    final next = (_heroPage + 1) % _heroImages.length;
-    _heroPageController.animateToPage(
-      next,
-      duration: const Duration(milliseconds: 600),
-      curve: Curves.easeInOut,
-    );
-    Future.delayed(const Duration(seconds: 4), _autoSlide);
+    setState(() {
+      role = prefs.getString('role') ?? '';
+      userData = ApiService.userData ?? {
+        'fullname': prefs.getString('fullname') ?? 'Pengguna',
+        'email': prefs.getString('email') ?? 'user@gmail.com',
+      };
+    });
   }
 
   @override
@@ -237,14 +236,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _getPage() {
     switch (_currentIndex) {
-      case 0: return _buildMainHomeContent();
-      case 1: return TiketPage();
-      case 2: return const CartPage();
-      case 3: return _buildBookingTab();
-      case 4: return role == 'admin'
-          ? const ProfileAdminPage()
-          : const ProfilePage();
-      default: return _buildMainHomeContent();
+
+      case 0:
+        return _buildMainHomeContent();
+      case 1:
+        return const TiketPage();
+      case 2:
+        return const CartPage();
+      case 3:
+        return _buildBookingTab();
+      case 4:
+        return role.toLowerCase() == 'admin'
+            ? const ProfileAdminPage()
+            : ProfilePage(userData: userData);
+          default:
+        return _buildMainHomeContent();
     }
   }
 
