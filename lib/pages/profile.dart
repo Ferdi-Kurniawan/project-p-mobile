@@ -13,36 +13,29 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _darkMode = false;
   String _selectedLang = 'Indonesia';
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      appBar: AppBar(
-        title: Text(
-          isAdmin ? "Profile Admin" : "Profile Pengguna",
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF7F7F7),
+        appBar: AppBar(
+          title: Text(
+            isAdmin ? "Profile Admin" : "Profile Pengguna",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            ),
           ),
+          backgroundColor: Colors.deepOrange.shade800,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          actions: [
+          
+          ],
         ),
-        backgroundColor: Colors.deepOrange.shade800,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.swap_horiz, color: Colors.white),
-            onPressed: () {
-              setState(() {
-                isAdmin = !isAdmin;
-              });
-            },
-          )
-        ],
-      ),
-      body: isAdmin ? _buildAdminProfile() : _buildUserProfile(),
-    );
-  }
+        body: isAdmin ? _buildAdminProfile() : _buildUserProfile(),
+      );
+    }
 
   // ================= ADMIN =================
   Widget _buildAdminProfile() {

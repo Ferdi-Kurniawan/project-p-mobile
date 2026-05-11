@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
 import 'package:flutter_application_2/pages/booking_page.dart';
+import 'package:flutter_application_2/services/api_service.dart'; // ✅ DITAMBAH
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -13,10 +14,40 @@ class _CartPageState extends State<CartPage> {
   DateTime? _tanggalMulai;
   DateTime? _tanggalSelesai;
 
+  // ✅ DITAMBAH: state untuk data dari backend
+  List<Map<String, dynamic>> _backendItems = [];
+  bool _loadingCart = true;
+
   @override
   void initState() {
     super.initState();
     CartModel.instance.addListener(_refresh);
+    _loadCartFromBackend(); // ✅ DITAMBAH: load data backend saat buka halaman
+  }
+
+  // ✅ DITAMBAH: fungsi load cart dari backend
+  Future<void> _loadCartFromBackend() async {
+    setState(() => _loadingCart = true);
+    final data = await ApiService.getCart();
+    setState(() {
+      _backendItems = data;
+      _loadingCart = false;
+
+      // Sync ke CartModel lokal supaya checkout tetap jalan
+      CartModel.instance.clear();
+      for (final item in data) {
+        // ✅ FIX: format harga dari int (50000) ke string rupiah (Rp 50.000)
+        final priceInt = int.tryParse((item['price'] ?? 0).toString()) ?? 0;
+        final hargaStr = _formatRupiah(priceInt);
+        CartModel.instance.addItemWithQuantity({
+          'name': (item['name'] ?? '').toString(),
+          'loc': (item['location'] ?? '').toString(),
+          'img': (item['image'] ?? item['img'] ?? '').toString(),
+          'harga': hargaStr,
+          'kategori': (item['category'] ?? item['kategori'] ?? '').toString(),
+        }, int.tryParse(item['quantity'].toString()) ?? 1);
+      }
+    });
   }
 
   void _refresh() => setState(() {});
@@ -694,7 +725,11 @@ const SizedBox(height: 24),
                         topRight: Radius.circular(30),
                       ),
                     ),
-                    child: items.isEmpty
+                    child: _loadingCart
+                        ? const Center(
+                            child: CircularProgressIndicator(color: Colors.deepOrange),
+                          )
+                        : items.isEmpty
                         ? _buildEmptyState()
                         : _buildCartList(items),
                   ),

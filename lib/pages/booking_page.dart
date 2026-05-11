@@ -1,3 +1,4 @@
+import 'package:flutter_application_2/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
@@ -23,6 +24,8 @@ class BookingPage extends StatefulWidget {
 class _BookingPageState extends State<BookingPage> {
   String? _selectedMetode;
   String? _selectedBank;
+  bool _isLoading = false;
+  String? _bookingIdFromBackend;
 
   static const Map<String, int> _adminFee = {
     'Transfer Bank': 4500,
@@ -74,6 +77,73 @@ class _BookingPageState extends State<BookingPage> {
     return 'WS${now.millisecondsSinceEpoch.toString().substring(7)}';
   }
 
+  // ── Proses booking ke backend ──
+  // FIX: Pisahkan logika API call ke method sendiri agar bisa async
+  Future<void> _prosesBooking() async {
+    // Tutup bottom sheet metode pembayaran dulu
+    if (mounted) Navigator.pop(context);
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await ApiService.createBooking(
+        startDate: widget.tanggalMulai.toIso8601String(),
+        endDate: widget.tanggalSelesai.toIso8601String(),
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (result != null) {
+        _bookingIdFromBackend = result['id']?.toString() ?? _bookingCode;
+        _showSuksesSheet();
+      } else {
+        _showErrorSnackbar('Gagal membuat booking. Coba lagi.');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showErrorSnackbar('Terjadi kesalahan. Periksa koneksi internet kamu.');
+    }
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(children: [
+          const Icon(Icons.error_outline, color: Colors.white, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ]),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showWarningSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: 10),
+          Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ]),
+        backgroundColor: Colors.orange.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
   // ── Pop up metode pembayaran ──
   void _showMetodePembayaran() {
     showModalBottomSheet(
@@ -95,7 +165,6 @@ class _BookingPageState extends State<BookingPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Handle bar
                   Container(
                     width: 40, height: 4,
                     decoration: BoxDecoration(
@@ -104,7 +173,6 @@ class _BookingPageState extends State<BookingPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
                   Row(
                     children: [
                       Container(
@@ -135,10 +203,7 @@ class _BookingPageState extends State<BookingPage> {
                           ),
                           Text(
                             'Pilih cara pembayaran kamu',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -157,8 +222,7 @@ class _BookingPageState extends State<BookingPage> {
                               final isSelected = _selectedBank == bank['name'];
                               return GestureDetector(
                                 onTap: () {
-                                  setSheetState(
-                                      () => _selectedBank = bank['name']);
+                                  setSheetState(() => _selectedBank = bank['name']);
                                   setState(() => _selectedBank = bank['name']);
                                 },
                                 child: AnimatedContainer(
@@ -184,13 +248,10 @@ class _BookingPageState extends State<BookingPage> {
                                         width: 36, height: 36,
                                         decoration: BoxDecoration(
                                           color: isSelected
-                                              ? Colors.deepOrange
-                                                  .withOpacity(0.1)
+                                              ? Colors.deepOrange.withOpacity(0.1)
                                               : Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          border: Border.all(
-                                              color: Colors.grey.shade200),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade200),
                                         ),
                                         child: Center(
                                           child: Text(
@@ -208,8 +269,7 @@ class _BookingPageState extends State<BookingPage> {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               'Bank ${bank['name']}',
@@ -256,20 +316,17 @@ class _BookingPageState extends State<BookingPage> {
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
                               borderRadius: BorderRadius.circular(12),
-                              border:
-                                  Border.all(color: Colors.grey.shade200),
+                              border: Border.all(color: Colors.grey.shade200),
                             ),
                             child: Column(
                               children: [
                                 Icon(Icons.qr_code_2_rounded,
-                                    size: 80,
-                                    color: Colors.grey.shade700),
+                                    size: 80, color: Colors.grey.shade700),
                                 const SizedBox(height: 6),
                                 Text(
                                   'QR Code akan muncul setelah konfirmasi',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500),
+                                      fontSize: 12, color: Colors.grey.shade500),
                                   textAlign: TextAlign.center,
                                 ),
                               ],
@@ -286,17 +343,12 @@ class _BookingPageState extends State<BookingPage> {
                     icon: Icons.account_balance_wallet_rounded,
                     child: _selectedMetode == 'E-Wallet'
                         ? Column(
-                            children: ['GoPay', 'OVO', 'Dana', 'ShopeePay']
-                                .map((w) {
+                            children: ['GoPay', 'OVO', 'Dana', 'ShopeePay'].map((w) {
                               final isSelected = _selectedBank == w;
                               return GestureDetector(
                                 onTap: () {
-                                  setSheetState(() {
-                                    _selectedBank = w;
-                                  });
-                                  setState(() {
-                                    _selectedBank = w;
-                                  });
+                                  setSheetState(() => _selectedBank = w);
+                                  setState(() => _selectedBank = w);
                                 },
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
@@ -344,8 +396,7 @@ class _BookingPageState extends State<BookingPage> {
                                       if (isSelected) ...[
                                         const SizedBox(width: 8),
                                         const Icon(Icons.check_circle_rounded,
-                                            color: Colors.deepOrange,
-                                            size: 20),
+                                            color: Colors.deepOrange, size: 20),
                                       ],
                                     ],
                                   ),
@@ -358,57 +409,32 @@ class _BookingPageState extends State<BookingPage> {
 
                   const SizedBox(height: 24),
 
-                  // Tombol Konfirmasi di dalam popup
+                  // ── Tombol Konfirmasi ──
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
+                      // FIX: onPressed sekarang tidak perlu async karena
+                      // _prosesBooking() adalah Future method yang di-call tanpa await.
+                      // Ini aman karena loading state dikelola di dalam _prosesBooking().
                       onPressed: () {
-                        // Validasi pilihan
+                        // Validasi pilihan metode
                         if (_selectedMetode == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Row(children: [
-                                Icon(Icons.warning_amber_rounded,
-                                    color: Colors.white, size: 18),
-                                SizedBox(width: 10),
-                                Text('Pilih metode pembayaran dulu',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600)),
-                              ]),
-                              backgroundColor: Colors.orange.shade700,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              margin: const EdgeInsets.all(16),
-                            ),
-                          );
+                          _showWarningSnackbar('Pilih metode pembayaran dulu');
                           return;
                         }
-                        if (_selectedMetode == 'Transfer Bank' &&
-                            _selectedBank == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Row(children: [
-                                Icon(Icons.warning_amber_rounded,
-                                    color: Colors.white, size: 18),
-                                SizedBox(width: 10),
-                                Text('Pilih bank tujuan transfer',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600)),
-                              ]),
-                              backgroundColor: Colors.orange.shade700,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                              margin: const EdgeInsets.all(16),
-                            ),
-                          );
+                        if (_selectedMetode == 'Transfer Bank' && _selectedBank == null) {
+                          _showWarningSnackbar('Pilih bank tujuan transfer');
                           return;
                         }
-                        // Tutup popup metode lalu tampilkan sukses
-                        Navigator.pop(context);
-                        _showSuksesSheet();
+                        if (_selectedMetode == 'E-Wallet' && _selectedBank == null) {
+                          _showWarningSnackbar('Pilih e-wallet yang ingin digunakan');
+                          return;
+                        }
+
+                        // FIX: Panggil _prosesBooking() yang sudah async dan handle
+                        // Navigator.pop di dalamnya — tidak perlu await di sini
+                        _prosesBooking();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepOrange,
@@ -436,7 +462,7 @@ class _BookingPageState extends State<BookingPage> {
 
   // ── Pop up sukses ──
   void _showSuksesSheet() {
-    final code = _bookingCode;
+    final code = _bookingIdFromBackend ?? _bookingCode;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -459,15 +485,11 @@ class _BookingPageState extends State<BookingPage> {
               ),
             ),
             const SizedBox(height: 28),
-
             Container(
               width: 88, height: 88,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    Colors.green.shade400,
-                    Colors.teal.shade400,
-                  ],
+                  colors: [Colors.green.shade400, Colors.teal.shade400],
                 ),
                 shape: BoxShape.circle,
               ),
@@ -475,7 +497,6 @@ class _BookingPageState extends State<BookingPage> {
                   color: Colors.white, size: 52),
             ),
             const SizedBox(height: 20),
-
             const Text(
               'Pembayaran Berhasil!',
               style: TextStyle(
@@ -493,8 +514,7 @@ class _BookingPageState extends State<BookingPage> {
             // Kode booking
             Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
                 color: Colors.deepOrange.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(14),
@@ -566,8 +586,7 @@ class _BookingPageState extends State<BookingPage> {
               ),
               child: Column(
                 children: [
-                  _infoRow('Metode',
-                      _selectedBank ?? _selectedMetode ?? '-'),
+                  _infoRow('Metode', _selectedBank ?? _selectedMetode ?? '-'),
                   const SizedBox(height: 8),
                   _infoRow('Total Bayar', _formatRupiah(_totalBayar)),
                   const SizedBox(height: 8),
@@ -587,9 +606,9 @@ class _BookingPageState extends State<BookingPage> {
               height: 52,
               child: ElevatedButton(
                 onPressed: () {
+                  // FIX: clear cart hanya di sini (satu tempat), lalu kembali ke home
                   CartModel.instance.clear();
-                  Navigator.of(context)
-                      .popUntil((route) => route.isFirst);
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
@@ -639,8 +658,7 @@ class _BookingPageState extends State<BookingPage> {
   }) {
     final isSelected = _selectedMetode == label ||
         (label == 'E-Wallet' &&
-            ['GoPay', 'OVO', 'Dana', 'ShopeePay']
-                .contains(_selectedMetode));
+            ['GoPay', 'OVO', 'Dana', 'ShopeePay'].contains(_selectedMetode));
 
     return GestureDetector(
       onTap: () {
@@ -709,8 +727,8 @@ class _BookingPageState extends State<BookingPage> {
                 ),
                 if (badge != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -728,9 +746,8 @@ class _BookingPageState extends State<BookingPage> {
                   isSelected
                       ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
-                  color: isSelected
-                      ? Colors.deepOrange
-                      : Colors.grey.shade400,
+                  color:
+                      isSelected ? Colors.deepOrange : Colors.grey.shade400,
                   size: 22,
                 ),
               ],
@@ -745,133 +762,149 @@ class _BookingPageState extends State<BookingPage> {
     );
   }
 
+  // FIX: build() sekarang bersih — Stack hanya berisi Scaffold + loading overlay
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      body: Stack(
-        children: [
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: const Color(0xFFF7F7F7),
+          body: Stack(
+            children: [
+              Container(
+                height: 220,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.deepOrange.shade800,
+                      Colors.orange.shade400,
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -40, right: -30,
+                child: Container(
+                  width: 160, height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.07),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 30, right: 60,
+                child: Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.07),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 24, 0),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 4),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Konfirmasi',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const Text(
+                                'Detail Pemesanan',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Expanded(
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF7F7F7),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(30),
+                            topRight: Radius.circular(30),
+                          ),
+                        ),
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+                          physics: const BouncingScrollPhysics(),
+                          children: [
+                            _sectionTitle('Info Kunjungan',
+                                Icons.calendar_month_rounded),
+                            const SizedBox(height: 10),
+                            _buildKunjunganCard(),
+                            const SizedBox(height: 20),
+                            _sectionTitle('Detail Tiket',
+                                Icons.confirmation_number_rounded),
+                            const SizedBox(height: 10),
+                            ...widget.items.map((item) => _buildTiketCard(item)),
+                            const SizedBox(height: 20),
+                            _sectionTitle('Ringkasan Harga',
+                                Icons.receipt_long_rounded),
+                            const SizedBox(height: 10),
+                            _buildHargaCard(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: _buildBottomBar(),
+        ),
+
+        // FIX: Loading overlay dipindah ke sini, di luar Scaffold
+        // agar benar-benar menutupi seluruh layar termasuk bottom bar
+        if (_isLoading)
           Container(
-            height: 220,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.deepOrange.shade800,
-                  Colors.orange.shade400,
+            color: Colors.black.withOpacity(0.45),
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    'Memproses booking...',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
             ),
           ),
-          Positioned(
-            top: -40, right: -30,
-            child: Container(
-              width: 160, height: 160,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.07),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 30, right: 60,
-            child: Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.07),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                // AppBar
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 12, 24, 0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white, size: 20),
-                      ),
-                      const SizedBox(width: 4),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Konfirmasi',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const Text(
-                            'Detail Pemesanan',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Konten
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF7F7F7),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                    ),
-                    child: ListView(
-                      padding:
-                          const EdgeInsets.fromLTRB(20, 24, 20, 120),
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        // ── Info Kunjungan ──
-                        _sectionTitle('Info Kunjungan',
-                            Icons.calendar_month_rounded),
-                        const SizedBox(height: 10),
-                        _buildKunjunganCard(),
-                        const SizedBox(height: 20),
-
-                        // ── Detail Tiket ──
-                        _sectionTitle('Detail Tiket',
-                            Icons.confirmation_number_rounded),
-                        const SizedBox(height: 10),
-                        ...widget.items.map((item) => _buildTiketCard(item)),
-                        const SizedBox(height: 20),
-
-                        // ── Ringkasan Harga ──
-                        _sectionTitle('Ringkasan Harga',
-                            Icons.receipt_long_rounded),
-                        const SizedBox(height: 10),
-                        _buildHargaCard(),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-
-      // Bottom bar
-      bottomNavigationBar: _buildBottomBar(),
+      ],
     );
   }
 
@@ -969,8 +1002,7 @@ class _BookingPageState extends State<BookingPage> {
           const SizedBox(height: 14),
           Container(
             width: double.infinity,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -1001,7 +1033,6 @@ class _BookingPageState extends State<BookingPage> {
     );
   }
 
-  // Tiket card tanpa foto
   Widget _buildTiketCard(CartItem item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1020,7 +1051,6 @@ class _BookingPageState extends State<BookingPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon pengganti foto
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
@@ -1034,21 +1064,17 @@ class _BookingPageState extends State<BookingPage> {
               ),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              Icons.confirmation_number_rounded,
-              color: Colors.white,
-              size: 24,
-            ),
+            child: const Icon(Icons.confirmation_number_rounded,
+                color: Colors.white, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badge kategori
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: Colors.deepOrange.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(6),
@@ -1080,8 +1106,8 @@ class _BookingPageState extends State<BookingPage> {
                     Expanded(
                       child: Text(
                         item.loc,
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade500),
+                        style:
+                            TextStyle(fontSize: 11, color: Colors.grey.shade500),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1147,8 +1173,8 @@ class _BookingPageState extends State<BookingPage> {
                     Expanded(
                       child: Text(
                         '${item.name} (${item.quantity}x)',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey.shade600),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1162,8 +1188,6 @@ class _BookingPageState extends State<BookingPage> {
                   ],
                 ),
               )),
-
-          // Biaya admin jika sudah pilih metode
           if (_selectedMetode != null) ...[
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -1172,8 +1196,8 @@ class _BookingPageState extends State<BookingPage> {
                 children: [
                   Text(
                     'Biaya admin (${_selectedBank ?? _selectedMetode})',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade600),
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                   Text(
                     _adminFeeAmount == 0
@@ -1191,10 +1215,8 @@ class _BookingPageState extends State<BookingPage> {
               ),
             ),
           ],
-
           Divider(color: Colors.grey.shade200),
           const SizedBox(height: 4),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1219,6 +1241,7 @@ class _BookingPageState extends State<BookingPage> {
     );
   }
 
+  // FIX: _buildBottomBar sekarang return Widget murni, bukan campur dengan Stack luar
   Widget _buildBottomBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
@@ -1263,10 +1286,10 @@ class _BookingPageState extends State<BookingPage> {
             ),
           ),
           GestureDetector(
-            onTap: _showMetodePembayaran, // buka popup metode
+            onTap: _showMetodePembayaran,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 28, vertical: 14),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [

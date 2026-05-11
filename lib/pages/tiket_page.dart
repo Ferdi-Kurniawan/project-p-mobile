@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_application_2/models/cart_models.dart';
+import '../services/api_service.dart';
+import '../models/cart_models.dart'; // ✅ DITAMBAH
 
 class TiketPage extends StatefulWidget {
   const TiketPage({super.key});
@@ -11,83 +12,85 @@ class TiketPage extends StatefulWidget {
 
 class _TiketPageState extends State<TiketPage>
     with SingleTickerProviderStateMixin {
+
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  final List<Map<String, String>> _villages = [
-    {
-      'name': 'Lembah Hijau',
-      'loc': 'Bandar Lampung',
-      'img': 'assets/images/lembahhijau.jpeg',
-      'harga': 'Rp 25.000',
-      'hargaNum': '25000',
-      'kategori': 'Hiburan',
-      'deskripsi': 'Taman wisata satwa dengan fasilitas waterboom.',
-      'icon': '🌳',
-    },
-    {
-      'name': 'Kebun Liwa',
-      'loc': 'Lampung Barat',
-      'img': 'assets/images/kebunliwa.jpeg',
-      'harga': 'Rp 20.000',
-      'hargaNum': '20000',
-      'kategori': 'Alam',
-      'deskripsi': 'Wisata kebun dengan udara sejuk pegunungan.',
-      'icon': '🌿',
-    },
-    {
-      'name': 'Pantai Pahawang',
-      'loc': 'Pesawaran',
-      'img': 'assets/images/pahawang1.jpg',
-      'harga': 'Rp 30.000',
-      'hargaNum': '30000',
-      'kategori': 'Pantai',
-      'deskripsi': 'Surga snorkeling dengan keindahan bawah laut.',
-      'icon': '🏖️',
-    },
-  ];
+  List<Map<String, dynamic>> _villages = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
-    _fadeAnim =
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+
+    _fadeAnim = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+    );
+
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
+    );
+
     _animController.forward();
+    fetchData();
   }
 
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
+  // ✅ FIX: Helper format rupiah — signature int agar cocok dengan _CheckoutSheet
+  String _formatRupiah(int price) {
+    return 'Rp ${price.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    )}';
   }
 
-  String _formatRupiah(int amount) {
-    final str = amount.toString();
-    final buffer = StringBuffer();
-    for (int i = 0; i < str.length; i++) {
-      if (i > 0 && (str.length - i) % 3 == 0) buffer.write('.');
-      buffer.write(str[i]);
-    }
-    return 'Rp ${buffer.toString()}';
+  void fetchData() async {
+    final data = await ApiService.getProducts();
+
+    setState(() {
+      _villages = List<Map<String, dynamic>>.from(
+        data.map((item) {
+          // ✅ FIX: category dari backend adalah object {id, name}, ambil name-nya
+          final kategori = item['category'] is Map
+              ? (item['category']['name'] ?? 'Wisata').toString()
+              : (item['category'] ?? 'Wisata').toString();
+
+          return {
+            'id': item['id'].toString(),
+            'name': (item['name'] ?? 'Wisata').toString(),
+            'harga': _formatRupiah(int.tryParse((item['price'] ?? 0).toString()) ?? 0),
+            'hargaNum': (item['price'] ?? 0).toString(),
+            'kategori': kategori,
+            'loc': (item['location'] ?? 'Lampung').toString(),
+            'deskripsi': (item['description'] ?? '').toString(),
+            'img': (item['image'] ?? '').toString(),
+            'icon': '🏔️',
+          };
+        }),
+      );
+      _loading = false;
+    });
   }
 
-  void _showCheckoutSheet(Map<String, String> wisata) {
+  // ✅ FIX: Tambahkan _showCheckoutSheet yang sebelumnya tidak ada
+  void _showCheckoutSheet(Map<String, dynamic> wisata) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _CheckoutSheet(
-        wisata: wisata,
+        wisata: Map<String, String>.from(
+          wisata.map((k, v) => MapEntry(k, v.toString())),
+        ),
         formatRupiah: _formatRupiah,
       ),
     );
@@ -266,7 +269,7 @@ class _TiketPageState extends State<TiketPage>
     );
   }
 
-  Widget _buildWisataCard(Map<String, String> wisata) {
+  Widget _buildWisataCard(Map<String, dynamic> wisata) {
     final List<Map<String, String>> badgeColors = [
       {'bg': 'FFF3E0', 'text': 'E65100'},
       {'bg': 'E8F5E9', 'text': '2E7D32'},
@@ -291,42 +294,88 @@ class _TiketPageState extends State<TiketPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Category badge & price (no image)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Row(
+          // Image
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            child: Stack(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF000000 | int.parse(badgeColor['bg']!, radix: 16)),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    wisata['kategori']!,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF000000 | int.parse(badgeColor['text']!, radix: 16)),
+                wisata['img'] != null && wisata['img'].toString().isNotEmpty
+                    ? Image.network(
+                        wisata['img']!,
+                        width: double.infinity,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imageFallback(wisata),
+                      )
+                    : _imageFallback(wisata),
+                // Gradient overlay
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  child: Container(
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.55),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [
-                      Colors.deepOrange.shade700,
-                      Colors.orange.shade400,
-                    ]),
-                    borderRadius: BorderRadius.circular(20),
+                // Category badge
+                Positioned(
+                  top: 12, left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Color(int.parse('FF${badgeColor['bg']}', radix: 16)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      wisata['kategori']!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(
+                            int.parse('FF${badgeColor['text']}', radix: 16)),
+                      ),
+                    ),
                   ),
-                  child: Text(
-                    wisata['harga']!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                ),
+                // Price on image
+                Positioned(
+                  bottom: 12, right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Colors.deepOrange.shade700,
+                        Colors.orange.shade400,
+                      ]),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.deepOrange.withOpacity(0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      wisata['harga']!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
@@ -435,6 +484,27 @@ class _TiketPageState extends State<TiketPage>
     );
   }
 
+  Widget _imageFallback(Map<String, dynamic> wisata) {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.deepOrange.shade700,
+            Colors.orange.shade300,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          wisata['icon']!,
+          style: const TextStyle(fontSize: 60),
+        ),
+      ),
+    );
+  }
+
   Widget _infoChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -485,42 +555,32 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       int.tryParse(widget.wisata['hargaNum'] ?? '0') ?? 0;
   int get _totalHarga => _hargaBase * _jumlah;
 
-  void _submit() {
+  void _submit() async {
     HapticFeedback.mediumImpact();
 
-    final namaWisata = widget.wisata['name'] ?? '';
+    final wisata = widget.wisata;
 
-    CartModel.instance.addItem({
-      'name': namaWisata,
-      'loc': widget.wisata['loc'] ?? '',
-      'img': widget.wisata['img'] ?? '',
-      'harga': _totalHarga.toString(),
-      'kategori': widget.wisata['kategori'] ?? '',
-    });
+    final productId = wisata['id'] ?? '';
+    if (productId.isEmpty) return;
+
+    final success = await ApiService.addToCart(productId, _jumlah);
+
+    // ✅ DITAMBAH: kalau berhasil, update CartModel supaya halaman Cart ikut tampil
+    if (success) {
+      CartModel.instance.addItemWithQuantity(wisata, _jumlah);
+    }
 
     Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded,
-                color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                "$namaWisata · $_jumlah tiket ditambahkan!",
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
+        content: Text(
+          success
+              ? "${wisata['name']} berhasil ditambahkan!"
+              : "Gagal menambahkan ke keranjang",
         ),
-        backgroundColor: Colors.deepOrange,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
+        backgroundColor:
+            success ? Colors.green : Colors.red,
       ),
     );
   }

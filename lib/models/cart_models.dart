@@ -54,6 +54,25 @@ class CartModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ DITAMBAH: tambah item dengan quantity langsung (dipakai dari tiket_page)
+  void addItemWithQuantity(Map<String, String> data, int qty) {
+    final existing = _items.where((i) => i.name == data['name']).toList();
+    if (existing.isNotEmpty) {
+      existing.first.quantity += qty;
+    } else {
+      _items.add(CartItem(
+        name: data['name'] ?? '',
+        loc: data['loc'] ?? '',
+        img: data['img'] ?? '',
+        harga: data['harga'] ?? '',
+        kategori: data['kategori'] ?? '',
+        quantity: qty,
+        addedAt: DateTime.now(),
+      ));
+    }
+    notifyListeners();
+  }
+
   void removeItem(String name) {
     _items.removeWhere((i) => i.name == name);
     notifyListeners();
