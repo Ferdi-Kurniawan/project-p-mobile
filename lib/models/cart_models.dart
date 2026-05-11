@@ -4,7 +4,6 @@ class CartItem {
   final String productId;
   final String name;
   final String loc;
-  final String img;
   final String harga;
   final String kategori;
   int quantity;
@@ -14,7 +13,6 @@ class CartItem {
     required this.productId,
     required this.name,
     required this.loc,
-    required this.img,
     required this.harga,
     required this.kategori,
     this.quantity = 1,
@@ -48,7 +46,6 @@ class CartModel extends ChangeNotifier {
         productId: data['productId'] ?? '',
         name: data['name'] ?? '',
         loc: data['loc'] ?? '',
-        img: data['img'] ?? '',
         harga: data['harga'] ?? '',
         kategori: data['kategori'] ?? '',
         addedAt: DateTime.now(),
@@ -64,9 +61,9 @@ class CartModel extends ChangeNotifier {
       existing.first.quantity += qty;
     } else {
       _items.add(CartItem(
+        productId: data['productId'] ?? '',
         name: data['name'] ?? '',
         loc: data['loc'] ?? '',
-        img: data['img'] ?? '',
         harga: data['harga'] ?? '',
         kategori: data['kategori'] ?? '',
         quantity: qty,

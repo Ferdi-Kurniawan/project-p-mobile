@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/api_service.dart';
 import 'tiket_page.dart';
 import 'cart.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
@@ -9,7 +8,7 @@ import 'detail_wisata.dart';
 import 'profile.dart';
 import 'profile_admin_page.dart';
 import 'booking_page.dart';
-
+import 'dart:async';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -31,8 +30,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late Animation<double> _heroScaleAnim;
   late Animation<double> _heroFadeAnim;
 
-  // Hero slider
+  // ✅ FIX: Timer untuk hero slider saja — BUKAN untuk nav tab
+  Timer? _autoSlide;
+
+  String _fullname = '';
+  String _email    = '';
   late PageController _heroPageController;
+
+  // ✅ FIX: _heroPage terpisah dari _currentIndex (nav tab)
   int _heroPage = 0;
 
   static const List<String> _heroImages = [
@@ -46,17 +51,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     'Kebun Sejuk Pegunungan',
   ];
 
+  // ✅ FIX: _currentIndex HANYA untuk bottom nav — tidak disentuh timer apapun
   int _currentIndex = 0;
+
   String _selectedKategori = "Semua";
-  String _searchQuery = "";
+  String _searchQuery      = "";
   final TextEditingController _searchController = TextEditingController();
-  String role = "";
-  bool _isSearchFocused = false;
+  String role              = "";
+  bool _isSearchFocused    = false;
   final FocusNode _searchFocus = FocusNode();
 
   static const Color _primary       = Color(0xFF0064D2);
   static const Color _primaryLight  = Color(0xFF3B8AFF);
-  static const Color _primaryDark   = Color(0xFF004AAD);
   static const Color _accent        = Color(0xFFFF6900);
   static const Color _bgPage        = Color(0xFFF0F4FA);
   static const Color _bgCard        = Color(0xFFFFFFFF);
@@ -64,8 +70,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   static const Color _textSecondary = Color(0xFF6B7A99);
   static const Color _textMuted     = Color(0xFFAAB4C8);
   static const Color _divider       = Color(0xFFE8EDF5);
-
-  static const String _heroImage = 'assets/images/pahawang1.jpg';
+  static const String _heroImage    = 'assets/images/pahawang1.jpg';
 
   Map<String, dynamic> userData = {
     'fullname': 'Pengguna',
@@ -78,7 +83,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'img': 'assets/images/lembahhijau.jpeg',
       'deskripsi': 'Taman wisata satwa dengan fasilitas waterboom.',
       'harga': 'Rp 25.000', 'kategori': 'Hiburan',
-      'gallery': 'assets/images/lembahhijau1.jpg,assets/images/lembahhijau2.jpg,assets/images/lembahhijau3.jpg',
+      'gallery':
+          'assets/images/lembahhijau1.jpg,assets/images/lembahhijau2.jpg,assets/images/lembahhijau3.jpg',
       'rating': '4.8', 'review': '2.3k',
     },
     {
@@ -86,7 +92,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'img': 'assets/images/kebunliwa.jpeg',
       'deskripsi': 'Wisata kebun dengan udara sejuk dan pemandangan indah.',
       'harga': 'Rp 20.000', 'kategori': 'Alam',
-      'gallery': 'assets/images/liwa1.jpeg,assets/images/liwa2.jpeg,assets/images/liwa3.jpeg',
+      'gallery':
+          'assets/images/liwa1.jpeg,assets/images/liwa2.jpeg,assets/images/liwa3.jpeg',
       'rating': '4.6', 'review': '1.8k',
     },
     {
@@ -94,7 +101,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'img': 'assets/images/pahawang1.jpg',
       'deskripsi': 'Surga snorkeling di Lampung dengan air jernih.',
       'harga': 'Rp 30.000', 'kategori': 'Pantai',
-      'gallery': 'assets/images/pahawang2.jpeg,assets/images/pahawang3.jpeg,assets/images/pahawang4.jpeg',
+      'gallery':
+          'assets/images/pahawang2.jpeg,assets/images/pahawang3.jpeg,assets/images/pahawang4.jpeg',
       'rating': '4.9', 'review': '5.1k',
     },
   ];
@@ -151,13 +159,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     },
   ];
 
-  // Stats summary data
   final List<Map<String, String>> _stats = [
-    {'value': '3', 'label': 'Destinasi'},
-    {'value': '10rb+', 'label': 'Wisatawan'},
-    {'value': '4.9', 'label': 'Rating'},
+    {'value': '3',    'label': 'Destinasi'},
+    {'value': '10rb+','label': 'Wisatawan'},
+    {'value': '4.9',  'label': 'Rating'},
   ];
 
+  // ══════════════════════════════════════════════════════
+  //  initState
+  // ══════════════════════════════════════════════════════
   @override
   void initState() {
     super.initState();
@@ -174,10 +184,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         vsync: this, duration: const Duration(milliseconds: 1200));
 
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-            begin: const Offset(0, 0.06), end: Offset.zero)
-        .animate(CurvedAnimation(
-            parent: _controller, curve: Curves.easeOutCubic));
+    _slideAnim =
+        Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
+            CurvedAnimation(
+                parent: _controller, curve: Curves.easeOutCubic));
     _pulseAnim = Tween<double>(begin: 0.95, end: 1.05).animate(
         CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
     _shimmerAnim = Tween<double>(begin: -2.0, end: 2.0).animate(
@@ -190,27 +200,47 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _heroPageController = PageController();
     _controller.forward();
     _heroController.forward();
-    // Auto-slide hero every 4 seconds
-    Future.delayed(const Duration(seconds: 4), _autoSlide);
+
+    // ✅ FIX: delay 4 detik lalu mulai auto-slide gambar hero saja
+    Future.delayed(const Duration(seconds: 4), _startAutoSlide);
+
     loadRole();
     _searchFocus.addListener(
         () => setState(() => _isSearchFocused = _searchFocus.hasFocus));
   }
 
-  void loadRole() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    setState(() {
-      role = prefs.getString('role') ?? '';
-      userData = ApiService.userData ?? {
-        'fullname': prefs.getString('fullname') ?? 'Pengguna',
-        'email': prefs.getString('email') ?? 'user@gmail.com',
-      };
+  // ✅ FIX: _startAutoSlide hanya mengubah halaman di PageView hero,
+  //         BUKAN mengubah _currentIndex (bottom nav tab)
+  void _startAutoSlide() {
+    if (!mounted) return;
+    _autoSlide = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final nextPage = (_heroPage + 1) % _heroImages.length;
+      _heroPageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
     });
   }
 
+  void loadRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      role      = prefs.getString('role')     ?? '';
+      _fullname = prefs.getString('fullname') ?? '';
+      _email    = prefs.getString('email')    ?? '';
+    });
+  }
+
+  // ✅ FIX: dispose membatalkan timer agar tidak ada memory leak
   @override
   void dispose() {
+    _autoSlide?.cancel();
     _heroPageController.dispose();
     _controller.dispose();
     _pulseController.dispose();
@@ -224,33 +254,32 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   List<Map<String, String>> get _filteredVillages {
     List<Map<String, String>> result = _villages;
     if (_selectedKategori != 'Semua')
-      result = result.where((v) => v['kategori'] == _selectedKategori).toList();
+      result =
+          result.where((v) => v['kategori'] == _selectedKategori).toList();
     if (_searchQuery.isNotEmpty)
       result = result
           .where((v) =>
-              v['name']!.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              v['loc']!.toLowerCase().contains(_searchQuery.toLowerCase()))
+              v['name']!
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()) ||
+              v['loc']!
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()))
           .toList();
     return result;
   }
 
   Widget _getPage() {
     switch (_currentIndex) {
-
-      case 0:
-        return _buildMainHomeContent();
-      case 1:
-        return const TiketPage();
-      case 2:
-        return const CartPage();
-      case 3:
-        return _buildBookingTab();
+      case 0:  return _buildMainHomeContent();
+      case 1:  return const TiketPage();
+      case 2:  return const CartPage();
+      case 3:  return _buildBookingTab();
       case 4:
         return role.toLowerCase() == 'admin'
             ? const ProfileAdminPage()
             : ProfilePage(userData: userData);
-          default:
-        return _buildMainHomeContent();
+      default: return _buildMainHomeContent();
     }
   }
 
@@ -295,7 +324,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   color: _textSecondary,
                                   height: 1.6)),
                           const SizedBox(height: 28),
-                          _buildCTAButton("Ke Keranjang",
+                          _buildCTAButton(
+                              "Ke Keranjang",
                               Icons.shopping_cart_rounded,
                               () => setState(() => _currentIndex = 2)),
                         ]),
@@ -315,6 +345,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // ══════════════════════════════════════════════════════
+  //  BUILD
+  // ══════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -331,7 +364,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  BOTTOM NAV — modern floating pill style
+  //  BOTTOM NAV — floating pill
   // ══════════════════════════════════════════════════════
   Widget _buildBottomNav() {
     return Container(
@@ -343,7 +376,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           BoxShadow(
               color: const Color(0xFF0064D2).withOpacity(0.14),
               blurRadius: 30,
-              spreadRadius: 0,
               offset: const Offset(0, 8)),
           BoxShadow(
               color: Colors.black.withOpacity(0.06),
@@ -364,13 +396,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               fontWeight: FontWeight.w700, fontSize: 10, letterSpacing: 0.2),
           unselectedLabelStyle:
               const TextStyle(fontWeight: FontWeight.w500, fontSize: 10),
+          // ✅ FIX: onTap hanya set _currentIndex — tidak ada campur tangan timer
           onTap: (index) => setState(() => _currentIndex = index),
           items: [
-            _navItem(Icons.explore_outlined,       Icons.explore,              "Beranda",   0),
-            _navItem(Icons.airplane_ticket_outlined, Icons.airplane_ticket,    "Tiket",     1),
-            _navItem(Icons.card_travel_outlined,   Icons.card_travel,          "Keranjang", 2),
-            _navItem(Icons.event_note_outlined,    Icons.event_note,           "Booking",   3),
-            _navItem(Icons.manage_accounts_outlined, Icons.manage_accounts,    "Profil",    4),
+            _navItem(Icons.explore_outlined,         Icons.explore,         "Beranda",   0),
+            _navItem(Icons.airplane_ticket_outlined, Icons.airplane_ticket, "Tiket",     1),
+            _navItem(Icons.card_travel_outlined,     Icons.card_travel,     "Keranjang", 2),
+            _navItem(Icons.event_note_outlined,      Icons.event_note,      "Booking",   3),
+            _navItem(Icons.manage_accounts_outlined, Icons.manage_accounts, "Profil",    4),
           ],
         ),
       ),
@@ -397,7 +430,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  MAIN HOME — CustomScrollView
+  //  MAIN HOME CONTENT
   // ══════════════════════════════════════════════════════
   Widget _buildMainHomeContent() {
     return FadeTransition(
@@ -421,18 +454,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  HERO SECTION — PageView 3 gambar + overlay + headline
+  //  HERO SECTION — PageView 3 foto
   // ══════════════════════════════════════════════════════
   Widget _buildHeroSection() {
     return SizedBox(
       height: 390,
       child: Stack(children: [
 
-        // ── 3-gambar PageView background ──
+        // ── PageView foto background ──
         Positioned.fill(
           child: PageView.builder(
             controller: _heroPageController,
             itemCount: _heroImages.length,
+            // ✅ FIX: onPageChanged hanya update _heroPage, BUKAN _currentIndex
             onPageChanged: (i) => setState(() => _heroPage = i),
             itemBuilder: (context, i) {
               return AnimatedBuilder(
@@ -454,7 +488,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
 
-        // ── Multi-layer gradient overlay ──
+        // ── Gradient overlay ──
         Positioned.fill(
           child: Container(
             decoration: const BoxDecoration(
@@ -493,15 +527,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           bottom: false,
           child: Stack(children: [
 
-            // ── App bar ──
+            // ── AppBar ──
             Positioned(
-              top: 14,
-              left: 18,
-              right: 18,
+              top: 14, left: 18, right: 18,
               child: Row(children: [
                 Container(
-                  width: 38,
-                  height: 38,
+                  width: 38, height: 38,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.18),
                     borderRadius: BorderRadius.circular(12),
@@ -519,24 +550,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "TripNusaDesa",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                        shadows: [Shadow(color: Colors.black45, blurRadius: 8)],
-                      ),
-                    ),
-                    Text(
-                      "Wisata Desa & Alam Lampung",
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.78),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    const Text("WisataLampung",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                          shadows: [
+                            Shadow(color: Colors.black45, blurRadius: 8)
+                          ],
+                        )),
+                    Text("Wisata Desa & Alam Lampung",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.78),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        )),
                   ],
                 ),
               ]),
@@ -544,65 +573,40 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
             // ── Location pill ──
             Positioned(
-              top: 68,
-              left: 18,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 700),
-                curve: Curves.easeOutCubic,
-                builder: (context, v, child) => Opacity(
-                  opacity: v,
-                  child: Transform.translate(
-                      offset: Offset(-10 * (1 - v), 0), child: child),
+              top: 68, left: 18,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(20),
+                  border:
+                      Border.all(color: Colors.white.withOpacity(0.3), width: 1),
                 ),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: Colors.white.withOpacity(0.3), width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_on_rounded,
-                          color: Color(0xFFFF6900), size: 13),
-                      const SizedBox(width: 4),
-                      Text(
-                        "Lampung, Indonesia",
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_on_rounded,
+                        color: Color(0xFFFF6900), size: 13),
+                    const SizedBox(width: 4),
+                    Text("Lampung, Indonesia",
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.92),
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                        )),
+                  ],
                 ),
               ),
             ),
 
-            // ── Hero headline + subtitle ──
+            // ── Headline + dot indicator ──
             Positioned(
-              bottom: 100,
-              left: 18,
-              right: 18,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOutCubic,
-                builder: (context, v, child) => Opacity(
-                  opacity: v,
-                  child: Transform.translate(
-                      offset: Offset(0, 20 * (1 - v)), child: child),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Mau ke mana harimu?",
+              bottom: 100, left: 18, right: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Mau ke mana harimu?",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 26,
@@ -615,64 +619,61 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               blurRadius: 12,
                               offset: Offset(0, 3))
                         ],
+                      )),
+                  const SizedBox(height: 8),
+                  // ✅ FIX: pakai _heroPage bukan _currentIndex
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                                begin: const Offset(0, 0.3), end: Offset.zero)
+                            .animate(anim),
+                        child: child,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      transitionBuilder: (child, anim) => FadeTransition(
-                        opacity: anim,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                                  begin: const Offset(0, 0.3), end: Offset.zero)
-                              .animate(anim),
-                          child: child,
+                    child: Text(
+                      "📍  ${_heroSubtitles[_heroPage]}",
+                      key: ValueKey(_heroPage),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.88),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.1,
+                        shadows: const [
+                          Shadow(color: Colors.black45, blurRadius: 6)
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // ✅ FIX: dot indicator pakai _heroPage bukan _currentIndex
+                  Row(
+                    children: List.generate(_heroImages.length, (i) {
+                      final active = i == _heroPage;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                        margin: const EdgeInsets.only(right: 6),
+                        width: active ? 22 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.40),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                      ),
-                      child: Text(
-                        "📍  ${_heroSubtitles[_heroPage]}",
-                        key: ValueKey(_heroPage),
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.88),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.1,
-                          shadows: const [
-                            Shadow(color: Colors.black45, blurRadius: 6)
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    // Dot indicator
-                    Row(
-                      children: List.generate(_heroImages.length, (i) {
-                        final active = i == _heroPage;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                          margin: const EdgeInsets.only(right: 6),
-                          width: active ? 22 : 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: active
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.40),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
+                      );
+                    }),
+                  ),
+                ],
               ),
             ),
 
-            // ── Search bar floating ──
+            // ── Search bar ──
             Positioned(
-              bottom: -22,
-              left: 16,
-              right: 16,
+              bottom: -22, left: 16, right: 16,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
@@ -682,13 +683,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     BoxShadow(
                         color: Colors.black.withOpacity(0.18),
                         blurRadius: 24,
-                        spreadRadius: 0,
                         offset: const Offset(0, 6)),
                     BoxShadow(
-                        color: _primary.withOpacity(
-                            _isSearchFocused ? 0.20 : 0.0),
+                        color: _primary
+                            .withOpacity(_isSearchFocused ? 0.20 : 0.0),
                         blurRadius: 16,
-                        spreadRadius: 0,
                         offset: const Offset(0, 4)),
                   ],
                   border: _isSearchFocused
@@ -711,8 +710,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     prefixIcon: Container(
                       padding: const EdgeInsets.only(left: 16, right: 10),
                       child: Container(
-                        width: 34,
-                        height: 34,
+                        width: 34, height: 34,
                         decoration: BoxDecoration(
                           color: _primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
@@ -721,8 +719,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             color: _primary, size: 18),
                       ),
                     ),
-                    prefixIconConstraints:
-                        const BoxConstraints(minWidth: 60),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 60),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? GestureDetector(
                             onTap: () => setState(() {
@@ -743,13 +740,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 color: _primary,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text(
-                                "Cari",
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700),
-                              ),
+                              child: const Text("Cari",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700)),
                             ),
                           ),
                     filled: true,
@@ -768,9 +763,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
         // ── Wave cut bawah ──
         Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
+          bottom: 0, left: 0, right: 0,
           child: Container(
             height: 28,
             decoration: const BoxDecoration(
@@ -786,7 +779,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  STATS BAR — destinasi / wisatawan / rating
+  //  STATS BAR
   // ══════════════════════════════════════════════════════
   Widget _buildStatsBar() {
     return Padding(
@@ -795,8 +788,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 600),
         curve: Curves.easeOutCubic,
-        builder: (context, v, child) =>
-            Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 12 * (1 - v)), child: child)),
+        builder: (context, v, child) => Opacity(
+            opacity: v,
+            child: Transform.translate(
+                offset: Offset(0, 12 * (1 - v)), child: child)),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
@@ -806,7 +801,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               BoxShadow(
                   color: _primary.withOpacity(0.10),
                   blurRadius: 20,
-                  spreadRadius: 0,
                   offset: const Offset(0, 6)),
               BoxShadow(
                   color: Colors.black.withOpacity(0.04),
@@ -817,32 +811,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: _stats.asMap().entries.map((entry) {
-              final i = entry.key;
+              final i    = entry.key;
               final stat = entry.value;
               return Row(children: [
                 Column(children: [
-                  Text(
-                    stat['value']!,
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: _primary,
-                        letterSpacing: -0.5),
-                  ),
+                  Text(stat['value']!,
+                      style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: _primary,
+                          letterSpacing: -0.5)),
                   const SizedBox(height: 2),
-                  Text(
-                    stat['label']!,
-                    style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: _textSecondary),
-                  ),
+                  Text(stat['label']!,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: _textSecondary)),
                 ]),
                 if (i < _stats.length - 1)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
-                    width: 1,
-                    height: 32,
+                    width: 1, height: 32,
                     color: _divider,
                   ),
               ]);
@@ -854,7 +843,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  PROMO CARDS — horizontal scroll, rapi tanpa "lihat semua"
+  //  PROMO CARDS
   // ══════════════════════════════════════════════════════
   Widget _buildPromoCards() {
     return Padding(
@@ -862,29 +851,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section header (tanpa tombol lihat semua) ──
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Row(children: [
               Container(
-                  width: 4,
-                  height: 18,
+                  width: 4, height: 18,
                   decoration: BoxDecoration(
                       color: _accent,
                       borderRadius: BorderRadius.circular(2))),
               const SizedBox(width: 10),
-              const Text(
-                "Penawaran Spesial",
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: _textPrimary,
-                    letterSpacing: -0.2),
-              ),
+              const Text("Penawaran Spesial",
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: _textPrimary,
+                      letterSpacing: -0.2)),
             ]),
           ),
-
-          // ── Horizontal list ──
           SizedBox(
             height: 148,
             child: ListView.builder(
@@ -893,7 +876,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               itemCount: _promoCards.length,
               itemBuilder: (context, i) {
-                final card = _promoCards[i];
+                final card   = _promoCards[i];
                 final colors = card['colors'] as List<Color>;
                 return TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.0, end: 1.0),
@@ -918,7 +901,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         BoxShadow(
                             color: colors[0].withOpacity(0.35),
                             blurRadius: 20,
-                            spreadRadius: 0,
                             offset: const Offset(0, 8)),
                         BoxShadow(
                             color: colors[0].withOpacity(0.12),
@@ -929,82 +911,70 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(22),
                       child: Stack(children: [
-                        // Lingkaran dekorasi kanan atas
                         Positioned(
-                          right: -20,
-                          top: -20,
+                          right: -20, top: -20,
                           child: Container(
-                            width: 100,
-                            height: 100,
+                            width: 100, height: 100,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white.withOpacity(0.10),
                             ),
                           ),
                         ),
-                        // Lingkaran dekorasi kiri bawah
                         Positioned(
-                          left: -16,
-                          bottom: -24,
+                          left: -16, bottom: -24,
                           child: Container(
-                            width: 90,
-                            height: 90,
+                            width: 90, height: 90,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white.withOpacity(0.07),
                             ),
                           ),
                         ),
-                        // Konten utama — Row: teks kiri + emoji kanan
                         Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 18, vertical: 16),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // ── Kolom kiri: badge + judul + tombol ──
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    // Badge tag
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.25),
-                                        borderRadius: BorderRadius.circular(6),
+                                        color:
+                                            Colors.white.withOpacity(0.25),
+                                        borderRadius:
+                                            BorderRadius.circular(6),
                                       ),
-                                      child: Text(
-                                        card['tag'] as String,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 1.0),
-                                      ),
+                                      child: Text(card['tag'] as String,
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 1.0)),
                                     ),
                                     const SizedBox(height: 8),
-                                    // Judul promo
-                                    Text(
-                                      card['title'] as String,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          height: 1.35),
-                                    ),
+                                    Text(card['title'] as String,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.35)),
                                     const SizedBox(height: 12),
-                                    // Tombol klaim
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 14, vertical: 7),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(10),
+                                        borderRadius:
+                                            BorderRadius.circular(10),
                                         boxShadow: [
                                           BoxShadow(
                                             color: Colors.black
@@ -1014,32 +984,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                           )
                                         ],
                                       ),
-                                      child: Text(
-                                        card['btnLabel'] as String,
-                                        style: TextStyle(
-                                            color: card['btnColor'] as Color,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800),
-                                      ),
+                                      child: Text(card['btnLabel'] as String,
+                                          style: TextStyle(
+                                              color: card['btnColor'] as Color,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800)),
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              // ── Emoji kanan ──
-                              Text(
-                                card['icon'] as String,
-                                style: TextStyle(
-                                  fontSize: 42,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withOpacity(0.18),
-                                      blurRadius: 12,
-                                      offset: const Offset(2, 4),
-                                    )
-                                  ],
-                                ),
-                              ),
+                              Text(card['icon'] as String,
+                                  style: TextStyle(
+                                    fontSize: 42,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.18),
+                                        blurRadius: 12,
+                                        offset: const Offset(2, 4),
+                                      )
+                                    ],
+                                  )),
                             ],
                           ),
                         ),
@@ -1056,7 +1021,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  QUICK MENU — category icons
+  //  QUICK MENU
   // ══════════════════════════════════════════════════════
   Widget _buildQuickMenu() {
     return Padding(
@@ -1067,7 +1032,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: _quickMenu.asMap().entries.map((entry) {
-            final i = entry.key;
+            final i    = entry.key;
             final item = entry.value;
             return TweenAnimationBuilder<double>(
               tween: Tween(begin: 0.0, end: 1.0),
@@ -1085,8 +1050,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: Column(children: [
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 66,
-                    height: 66,
+                    width: 66, height: 66,
                     decoration: BoxDecoration(
                         color: item['bg'] as Color,
                         borderRadius: BorderRadius.circular(20),
@@ -1098,7 +1062,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           BoxShadow(
                               color: (item['color'] as Color).withOpacity(0.18),
                               blurRadius: 14,
-                              spreadRadius: 0,
                               offset: const Offset(0, 5)),
                         ]),
                     child: Icon(item['icon'] as IconData,
@@ -1128,8 +1091,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
-              width: 4,
-              height: 20,
+              width: 4, height: 20,
               decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [_primary, _primaryLight],
@@ -1159,7 +1121,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
               decoration: BoxDecoration(
                 color: _bgCard,
                 borderRadius: BorderRadius.circular(18),
@@ -1168,7 +1131,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   BoxShadow(
                       color: (card['color'] as Color).withOpacity(0.08),
                       blurRadius: 16,
-                      spreadRadius: 0,
                       offset: const Offset(0, 5)),
                   BoxShadow(
                       color: Colors.black.withOpacity(0.04),
@@ -1178,8 +1140,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
               child: Row(children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 52, height: 52,
                   decoration: BoxDecoration(
                       color: card['bg'] as Color,
                       borderRadius: BorderRadius.circular(15),
@@ -1213,8 +1174,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 32, height: 32,
                   decoration: BoxDecoration(
                     color: (card['color'] as Color).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -1240,17 +1200,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  WISATA CARDS SECTION
+  //  WISATA SECTION
   // ══════════════════════════════════════════════════════
   Widget _buildWisataSection() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child:
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Row(children: [
             Container(
-                width: 4,
-                height: 18,
+                width: 4, height: 18,
                 decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [_primary, _primaryLight],
@@ -1267,7 +1227,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     letterSpacing: -0.2)),
           ]),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
                 color: const Color(0xFFE6F0FF),
                 borderRadius: BorderRadius.circular(12),
@@ -1323,7 +1284,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   position: Tween<Offset>(
                           begin: const Offset(0.04, 0), end: Offset.zero)
                       .animate(CurvedAnimation(
-                          parent: animation, curve: Curves.easeOutCubic)),
+                          parent: animation,
+                          curve: Curves.easeOutCubic)),
                   child: child,
                 ),
               ),
@@ -1339,7 +1301,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             BoxShadow(
                 color: _primary.withOpacity(0.07),
                 blurRadius: 20,
-                spreadRadius: 0,
                 offset: const Offset(0, 8)),
             BoxShadow(
                 color: Colors.black.withOpacity(0.06),
@@ -1349,7 +1310,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
         child: Column(children: [
           Stack(children: [
-            // Image
             ClipRRect(
               borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(22),
@@ -1371,7 +1331,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 color: _primary, size: 48)),
                       )),
             ),
-            // Gradient overlay on image
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: const BorderRadius.only(
@@ -1392,22 +1351,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            // Category badge
             Positioned(
-              top: 14,
-              left: 14,
+              top: 14, left: 14,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: _primary,
                   borderRadius: BorderRadius.circular(9),
                   boxShadow: [
                     BoxShadow(
-                      color: _primary.withOpacity(0.4),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    )
+                        color: _primary.withOpacity(0.4),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3))
                   ],
                 ),
                 child: Text(village['kategori']!,
@@ -1418,43 +1374,36 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         letterSpacing: 0.4)),
               ),
             ),
-            // Bookmark button
             Positioned(
-              top: 12,
-              right: 12,
+              top: 12, right: 12,
               child: Container(
-                width: 36,
-                height: 36,
+                width: 36, height: 36,
                 decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.92),
                     borderRadius: BorderRadius.circular(11),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.12),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      )
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2))
                     ]),
                 child: const Icon(Icons.bookmark_border_rounded,
                     color: _primary, size: 18),
               ),
             ),
-            // Rating badge on image
             Positioned(
-              bottom: 14,
-              left: 14,
+              bottom: 14, left: 14,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(9),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.14),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      )
+                          color: Colors.black.withOpacity(0.14),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3))
                     ]),
                 child: Row(children: [
                   const Icon(Icons.star_rounded,
@@ -1474,8 +1423,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ),
           ]),
-
-          // Card body
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             child: Column(
@@ -1514,7 +1461,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // ── Helpers used by other tabs ──
+  // ── Helpers ──
 
   Widget _buildGradientHeader(double height) {
     return SizedBox(
@@ -1549,8 +1496,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return ScaleTransition(
       scale: _pulseAnim,
       child: Container(
-        width: 100,
-        height: 100,
+        width: 100, height: 100,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: color.withOpacity(0.08),
@@ -1561,11 +1507,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCTAButton(String text, IconData icon, VoidCallback onTap) {
+  Widget _buildCTAButton(
+      String text, IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
         decoration: BoxDecoration(
           color: _primary,
           borderRadius: BorderRadius.circular(14),
@@ -1611,7 +1559,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 }
 
 // ════════════════════════════════════════════════════════
-//  Fallback Beach Painter — jika asset foto gagal load
+//  Fallback Beach Painter (jika foto gagal load)
 // ════════════════════════════════════════════════════════
 class _FallbackBeachPainter extends CustomPainter {
   @override
@@ -1619,70 +1567,66 @@ class _FallbackBeachPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // Sky gradient
-    final skyPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF0D47A1), Color(0xFF1976D2), Color(0xFF42A5F5)],
-        stops: [0.0, 0.5, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), skyPaint);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w, h),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0D47A1), Color(0xFF1976D2), Color(0xFF42A5F5)],
+          stops: [0.0, 0.5, 1.0],
+        ).createShader(Rect.fromLTWH(0, 0, w, h)),
+    );
 
-    // Sun glow
-    canvas.drawCircle(Offset(w * 0.75, h * 0.20),
-        46, Paint()..color = const Color(0xFFFFD54F).withOpacity(0.22)
+    canvas.drawCircle(Offset(w * 0.75, h * 0.20), 46,
+        Paint()
+          ..color = const Color(0xFFFFD54F).withOpacity(0.22)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28));
     canvas.drawCircle(Offset(w * 0.75, h * 0.20), 28,
         Paint()..color = const Color(0xFFFFE082).withOpacity(0.9));
 
-    // Sea
-    final seaPath = Path()
-      ..moveTo(0, h * 0.50)
-      ..lineTo(w, h * 0.50)
-      ..lineTo(w, h * 0.80)
-      ..lineTo(0, h * 0.80)
-      ..close();
     canvas.drawPath(
-        seaPath,
-        Paint()
-          ..shader = const LinearGradient(
-            colors: [Color(0xFF0277BD), Color(0xFF01579B)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ).createShader(Rect.fromLTWH(0, h * 0.5, w, h * 0.3)));
+      Path()
+        ..moveTo(0, h * 0.50)
+        ..lineTo(w, h * 0.50)
+        ..lineTo(w, h * 0.80)
+        ..lineTo(0, h * 0.80)
+        ..close(),
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF0277BD), Color(0xFF01579B)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Rect.fromLTWH(0, h * 0.5, w, h * 0.3)),
+    );
 
-    // Sand
-    final sandPath = Path()
-      ..moveTo(0, h * 0.76)
-      ..quadraticBezierTo(w * 0.5, h * 0.72, w, h * 0.75)
-      ..lineTo(w, h)
-      ..lineTo(0, h)
-      ..close();
     canvas.drawPath(
-        sandPath,
-        Paint()
-          ..shader = const LinearGradient(
-            colors: [Color(0xFFE8C77A), Color(0xFFC9A24E)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ).createShader(Rect.fromLTWH(0, h * 0.72, w, h * 0.28)));
+      Path()
+        ..moveTo(0, h * 0.76)
+        ..quadraticBezierTo(w * 0.5, h * 0.72, w, h * 0.75)
+        ..lineTo(w, h)
+        ..lineTo(0, h)
+        ..close(),
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFFE8C77A), Color(0xFFC9A24E)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Rect.fromLTWH(0, h * 0.72, w, h * 0.28)),
+    );
 
-    // Waves
     for (int i = 0; i < 3; i++) {
       final wY = h * (0.52 + i * 0.05);
-      final wavePath = Path()
-        ..moveTo(0, wY)
-        ..quadraticBezierTo(w * 0.25, wY - 5, w * 0.5, wY)
-        ..quadraticBezierTo(w * 0.75, wY + 5, w, wY)
-        ..lineTo(w, wY + 7)
-        ..lineTo(0, wY + 7)
-        ..close();
       canvas.drawPath(
-          wavePath,
-          Paint()
-            ..color =
-                Colors.white.withOpacity(0.10 - i * 0.025));
+        Path()
+          ..moveTo(0, wY)
+          ..quadraticBezierTo(w * 0.25, wY - 5, w * 0.5, wY)
+          ..quadraticBezierTo(w * 0.75, wY + 5, w, wY)
+          ..lineTo(w, wY + 7)
+          ..lineTo(0, wY + 7)
+          ..close(),
+        Paint()..color = Colors.white.withOpacity(0.10 - i * 0.025),
+      );
     }
   }
 

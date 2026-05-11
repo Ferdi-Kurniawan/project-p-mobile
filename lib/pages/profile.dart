@@ -1,415 +1,315 @@
 import 'package:flutter/material.dart';
+import 'dart:ui'; // Diperlukan untuk efek Frosted Glass & Blur
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.userData});
 
   final Map<String, dynamic> userData;
-  
+
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _notifEnabled = true;
-  bool _darkMode = false;
-  String _selectedLang = 'Indonesia';
 
+  // Palette Warna 2026: Sunlit, Airy, & Natural
+  static const Color mintPastel = Color(0xFFE6FFFA);
+  static const Color skyBluePastel = Color(0xFFEBF8FF);
+  static const Color tealGlow = Color(0xFF4FD1C5);
+  static const Color charcoalGrey = Color(0xFF2D3748);
+  static const Color oceanBlueGradient = Color(0xFF3182CE);
+  static const Color mintGradient = Color(0xFF81E6D9);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      appBar: AppBar(
-        title: Text(
-          "Profile Pengguna",
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
-          backgroundColor: Colors.deepOrange.shade800,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
-          actions: [
-          
-          ],
-        ),
-
-        backgroundColor: Colors.deepOrange.shade800,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: _buildUserProfile(),
-    );
-  }
-
-  Widget _buildUserProfile() {
-
-    final String fullname = widget.userData['fullname'];
-    final String email = widget.userData['email'];
-
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
+      backgroundColor: const Color(0xFFFCFDFF), // Soft Ivory Background
+      body: Stack(
         children: [
-          _buildHeader(fullname, email),
-          const SizedBox(height: 24),
-
-          _buildSectionLabel("Aktivitas"),
-          _buildMenuCard(
-            Icons.favorite_outline,
-            "Wisata Favorit",
-            subtitle: "Lihat daftar favorit kamu",
-          ),
-          _buildMenuCard(
-            Icons.receipt_long_outlined,
-            "Riwayat Tiket",
-            subtitle: "Cek tiket yang pernah dibeli",
-          ),
-
-          const SizedBox(height: 8),
-          _buildSectionLabel("Pengaturan Akun"),
-          _buildMenuCard(
-            Icons.person_outline_rounded,
-            "Edit Profil",
-            subtitle: "Ubah nama dan informasi akun",
-          ),
-          _buildMenuCard(
-            Icons.lock_outline_rounded,
-            "Ubah Password",
-            subtitle: "Perbarui kata sandi kamu",
+          // 1. BACKGROUND TERBARU: Pemandangan Alam Tropis (High Stability Link)
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.3,
+              child: Image.network(
+                'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070', // Landscape Danau/Tropis yang tenang
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(color: Colors.white); // Fallback jika internet lambat
+                },
+              ),
+            ),
           ),
 
-          const SizedBox(height: 8),
-          _buildSectionLabel("Preferensi"),
-          _buildToggleCard(
-            Icons.notifications_outlined,
-            "Notifikasi",
-            subtitle: "Aktifkan pemberitahuan",
-            value: _notifEnabled,
-            onChanged: (val) => setState(() => _notifEnabled = val),
-          ),
-          _buildToggleCard(
-            Icons.dark_mode_outlined,
-            "Mode Gelap",
-            subtitle: "Ubah tema tampilan",
-            value: _darkMode,
-            onChanged: (val) => setState(() => _darkMode = val),
-          ),
-          _buildLanguageCard(),
+          // 2. DECORATIVE 3D ASSETS: Ambient Glow
+          Positioned(top: 80, left: -40, child: _buildAmbientOrb(mintPastel, 300)),
+          Positioned(bottom: 100, right: -40, child: _buildAmbientOrb(skyBluePastel, 300)),
+          
+          // 3. MAIN INTERFACE
+          SafeArea(
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 40),
+                        
+                        // PROFILE HEADER: Glass Frame & 3D Avatar
+                        _buildProfileHeader(),
+                        
+                        const SizedBox(height: 50),
 
-          const SizedBox(height: 8),
-          _buildSectionLabel("Lainnya"),
-          _buildMenuCard(
-            Icons.help_outline_rounded,
-            "Bantuan & FAQ",
-            subtitle: "Pusat bantuan pengguna",
-          ),
-          _buildMenuCard(
-            Icons.info_outline_rounded,
-            "Tentang Aplikasi",
-            subtitle: "Versi 1.0.0",
-          ),
-          _buildMenuCard(
-            Icons.logout_rounded,
-            "Logout",
-            subtitle: "Keluar dari akun",
-            isDestructive: true,
-          ),
+                        // MENU SECTION: Floating Glassmorphic Cards
+                        _buildSectionLabel("AKTIVITAS"),
+                        _buildGlassMenuCard(
+                          Icons.receipt_long_outlined, 
+                          "Riwayat Tiket", 
+                          "Cek tiket yang telah dipesan"
+                        ),
+                        _buildGlassMenuCard(
+                          Icons.account_balance_wallet_outlined, 
+                          "Metode Pembayaran", 
+                          "Kelola dompet digital & kartu"
+                        ),
+                        
+                        const SizedBox(height: 30),
+                        
+                        _buildSectionLabel("PENGATURAN & BANTUAN"),
+                        _buildGlassToggleCard(
+                          Icons.notifications_none_rounded, 
+                          "Notifikasi", 
+                          _notifEnabled, 
+                          (v) => setState(() => _notifEnabled = v)
+                        ),
+                        _buildGlassMenuCard(
+                          Icons.help_outline_rounded, 
+                          "Pusat Bantuan", 
+                          "Layanan pelanggan 24/7"
+                        ),
+                        
+                        const SizedBox(height: 40),
 
-          const SizedBox(height: 36),
+                        // BOTTOM ACTION: Refreshing Gradient Button
+                        _buildActionButton("KELUAR"),
+                        
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // ================= COMPONENT =================
-
-  Widget _buildHeader(String name, String email) {
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
+  Widget _buildProfileHeader() {
+    final String fullname = widget.userData['fullname'] ?? "Penjelajah";
+    
+    return Column(
       children: [
-        // Gradient header background
         Container(
-          height: 130,
-          width: double.infinity,
+          width: 120,
+          height: 120,
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.deepOrange.shade800, Colors.orange.shade400],
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: tealGlow.withOpacity(0.3),
+                blurRadius: 30,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(60),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.4),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.6), width: 1.5),
+                ),
+                child: const Icon(
+                  Icons.face_retouching_natural_rounded,
+                  size: 60,
+                  color: tealGlow,
+                ),
+              ),
             ),
           ),
         ),
-
-        // Avatar di tengah
-        Positioned(
-          top: 60,
-          child: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepOrange.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: Colors.deepOrange.shade100,
-                  child: Icon(
-                    Icons.person_rounded,
-                    size: 52,
-                    color: Colors.deepOrange.shade700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1A1A1A),
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                email,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Badge role
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.deepOrange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.deepOrange.withOpacity(0.25),
-                  ),
-                ),
-              ),
-            ],
+        const SizedBox(height: 20),
+        Text(
+          fullname,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: charcoalGrey,
+            letterSpacing: -0.5,
           ),
         ),
-
-        // Spacer untuk tinggi total header + avatar
-        const SizedBox(height: 310),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: tealGlow.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            "PREMIUM TRAVELER",
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildSectionLabel(String label) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+      padding: const EdgeInsets.only(left: 10, bottom: 12),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: Colors.grey.shade500,
-            letterSpacing: 0.8,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: charcoalGrey.withOpacity(0.4),
+            letterSpacing: 1.5,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildMenuCard(
-    IconData icon,
-    String title, {
-    String? subtitle,
-    bool isDestructive = false,
-  }) {
-    final color = isDestructive ? Colors.red.shade400 : Colors.deepOrange;
+  Widget _buildGlassMenuCard(IconData icon, String title, String subtitle) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: _glassBoxDecoration(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            leading: Icon(icon, color: tealGlow, size: 24),
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700, color: charcoalGrey, fontSize: 15),
+            ),
+            subtitle: Text(
+              subtitle, 
+              style: TextStyle(color: charcoalGrey.withOpacity(0.5), fontSize: 12)
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black12),
+            onTap: () {},
           ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: isDestructive
-                ? Colors.red.withOpacity(0.08)
-                : Colors.deepOrange.withOpacity(0.09),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: isDestructive
-                ? Colors.red.shade400
-                : const Color(0xFF1A1A1A),
-          ),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade400,
-                  fontWeight: FontWeight.w400,
-                ),
-              )
-            : null,
-        trailing: Icon(
-          Icons.arrow_forward_ios_rounded,
-          size: 14,
-          color: Colors.grey.shade300,
         ),
       ),
     );
   }
 
-  Widget _buildToggleCard(
-    IconData icon,
-    String title, {
-    String? subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
+  Widget _buildGlassToggleCard(IconData icon, String title, bool value, Function(bool) onChanged) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: _glassBoxDecoration(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: SwitchListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            secondary: Icon(icon, color: tealGlow, size: 24),
+            title: Text(
+              title, 
+              style: const TextStyle(fontWeight: FontWeight.w700, color: charcoalGrey, fontSize: 15)
+            ),
+            value: value,
+            activeColor: tealGlow,
+            onChanged: onChanged,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(String label) {
+    return Container(
+      width: double.infinity,
+      height: 60,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          colors: [mintGradient, oceanBlueGradient],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: oceanBlueGradient.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.deepOrange.withOpacity(0.09),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: Colors.deepOrange, size: 20),
+      child: ElevatedButton(
+        onPressed: () => Navigator.pop(context),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         ),
-        title: Text(
-          title,
+        child: Text(
+          label,
           style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
             fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
+            letterSpacing: 3,
           ),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-              )
-            : null,
-        trailing: Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: Colors.deepOrange,
         ),
       ),
     );
   }
 
-  Widget _buildLanguageCard() {
+  Widget _buildAmbientOrb(Color color, double size) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.deepOrange.withOpacity(0.09),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(
-            Icons.language_rounded,
-            color: Colors.deepOrange,
-            size: 20,
-          ),
-        ),
-        title: const Text(
-          "Bahasa",
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A1A),
-          ),
-        ),
-        subtitle: Text(
-          "Pilih bahasa aplikasi",
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-        ),
-        trailing: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: _selectedLang,
-            icon: Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: Colors.grey.shade400,
-            ),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.deepOrange.shade700,
-            ),
-            items: ['Indonesia', 'English'].map((lang) {
-              return DropdownMenuItem(value: lang, child: Text(lang));
-            }).toList(),
-            onChanged: (val) {
-              if (val != null) setState(() => _selectedLang = val);
-            },
-          ),
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color.withOpacity(0.6), Colors.transparent],
         ),
       ),
+    );
+  }
+
+  BoxDecoration _glassBoxDecoration() {
+    return BoxDecoration(
+      color: Colors.white.withOpacity(0.4),
+      borderRadius: BorderRadius.circular(25),
+      border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 30,
+          offset: const Offset(0, 15),
+        )
+      ],
     );
   }
 }
