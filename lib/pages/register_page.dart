@@ -42,6 +42,7 @@ class _RegisterPageState extends State<RegisterPage> {
       password.text,
     );
 
+    if (!mounted) return;
     setState(() => isLoading = false);
 
     if (success) {

@@ -33,37 +33,21 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() => isLoading = true);
-    
-    try {
-      final user = await ApiService.login(email.text, password.text);
-      
-      if (user != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('role', user['role'] ?? 'user');
-        await prefs.setString('fullname', user['fullname'] ?? '');
-        await prefs.setString('email', user['email'] ?? '');
-        
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Login gagal: Periksa kembali akun Anda"),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Terjadi kesalahan sistem: $e")),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => isLoading = false);
+
+    final user = await ApiService.login(email.text, password.text);
+
+    setState(() => isLoading = false);
+
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('role', user['role']);
+      await prefs.setString('fullname', user['fullname']);
+      await prefs.setString('email', user['email']);
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Login gagal")),
+      );
     }
   }
 

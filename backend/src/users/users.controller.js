@@ -79,6 +79,17 @@ const loginUser = async (req, res) => {
 };
 
 
+const logoutUser = (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ status: 'error', message: 'Gagal logout' });
+    }
+    res.clearCookie('connect.sid'); // Nama cookie default express-session
+    return res.status(200).json({ status: 'success', message: 'Logout berhasil' });
+  });
+};
+
+
 const getAllUsers = async (req, res) => {
   try {
     const users = await UserRepository.findAll();
@@ -88,4 +99,4 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-export { createUser, loginUser, getAllUsers };
+export { createUser, loginUser, logoutUser, getAllUsers };

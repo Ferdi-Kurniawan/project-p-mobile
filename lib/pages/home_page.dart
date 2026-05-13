@@ -1540,6 +1540,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
     }
     return BookingPage(
+      bookingId: '',
       items: items.toList(),
       tanggalMulai: DateTime.now(),
       tanggalSelesai: DateTime.now().add(const Duration(days: 1)),
