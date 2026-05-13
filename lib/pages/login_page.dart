@@ -19,7 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   // Palette Warna 2026: Sunlit, Modern & Airy
   static const Color tealDeep = Color(0xFF319795);
   static const Color oceanBlueDeep = Color(0xFF2C5282);
-  static const Color charcoalGrey = Color(0xFF2D3748);
+  static const Color charcoalGrey = Color(0xFFFFFFFF);
 
   void login() async {
     if (email.text.isEmpty || password.text.isEmpty) {
@@ -83,7 +83,18 @@ class _LoginPageState extends State<LoginPage> {
                   fit: BoxFit.cover,
                 ),
               ),
-              child: Container(color: Colors.white.withOpacity(0.15)),
+              child: Container(
+  decoration: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Colors.black.withOpacity(0.35),
+        Colors.black.withOpacity(0.60),
+      ],
+    ),
+  ),
+),
             ),
           ),
 
@@ -108,9 +119,9 @@ class _LoginPageState extends State<LoginPage> {
                         child: Container(
                           padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.45),
+                            color: Colors.white.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(45),
-                            border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                            border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.06),
@@ -134,7 +145,7 @@ class _LoginPageState extends State<LoginPage> {
                               const SizedBox(height: 8),
                               Text(
                                 "Masuk untuk eksplorasi nusantara",
-                                style: TextStyle(color: charcoalGrey.withOpacity(0.6), fontSize: 14),
+                                style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
                               ),
                               const SizedBox(height: 35),
 
@@ -217,9 +228,9 @@ class _LoginPageState extends State<LoginPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
+        color: Colors.white.withOpacity(0.10),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withOpacity(0.25)),
       ),
       child: TextField(
         controller: controller,
@@ -233,7 +244,7 @@ class _LoginPageState extends State<LoginPage> {
         decoration: InputDecoration(
           // Pengaturan Label & Placeholder
           labelText: label,
-          labelStyle: TextStyle(color: charcoalGrey.withOpacity(0.5), fontSize: 13),
+          labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
           floatingLabelStyle: const TextStyle(
             color: tealDeep, 
             fontWeight: FontWeight.w800, 
@@ -241,7 +252,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           
           hintText: hintText,
-          hintStyle: TextStyle(color: charcoalGrey.withOpacity(0.2), fontSize: 13),
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
 
           // Ikon Prefix (Ikon di kiri)
           prefixIcon: Padding(
@@ -269,7 +280,7 @@ class _LoginPageState extends State<LoginPage> {
         Container(
           padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withOpacity(0.10),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withOpacity(0.5)),
           ),
@@ -279,7 +290,7 @@ class _LoginPageState extends State<LoginPage> {
         const Text(
           "TRIP NUSA DESA",
           style: TextStyle(
-            color: charcoalGrey,
+            color: Colors.white,
             letterSpacing: 6,
             fontSize: 12,
             fontWeight: FontWeight.w900,

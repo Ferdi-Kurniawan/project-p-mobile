@@ -147,7 +147,7 @@ class _TiketPageState extends State<TiketPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "E-TIKET PARIWISATA",
+            "Trip Nusa Desa",
             style: TextStyle(
               color: _tealAccent,
               fontSize: 12,
@@ -157,7 +157,7 @@ class _TiketPageState extends State<TiketPage>
           ),
           const SizedBox(height: 6),
           Text(
-            "Jelajahi Indonesia",
+            "Pesan Tiket",
             style: TextStyle(
               color: _charcoal,
               fontSize: 30,
@@ -170,146 +170,177 @@ class _TiketPageState extends State<TiketPage>
     );
   }
 
-  Widget _buildPremiumGlassCard(Map<String, dynamic> wisata) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 28),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 25,
-            offset: const Offset(0, 10),
+ // Cari fungsi _buildPremiumGlassCard dan ganti bagian Stack-nya dengan ini:
+
+Widget _buildPremiumGlassCard(Map<String, dynamic> wisata) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 28),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(32),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 25,
+          offset: const Offset(0, 10),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(32),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.85), // Sedikit lebih pekat agar teks lebih terbaca
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: Colors.white.withOpacity(0.8), width: 1.5),
-            ),
-            child: Column(
-              children: [
-                // Glossy Image Section
-                Stack(
-                  children: [
-                    wisata['img'].toString().isNotEmpty
-                        ? Image.network(
-                            wisata['img'],
-                            height: 200,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            height: 200,
-                            width: double.infinity,
-                            color: _mintGreen,
-                            child: Center(child: Text(wisata['icon'], style: const TextStyle(fontSize: 50))),
-                          ),
-                    // High-fidelity shine overlay
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.white.withOpacity(0.2),
-                              Colors.transparent,
-                              Colors.white.withOpacity(0.1),
-                            ],
-                          ),
+          child: Column(
+            children: [
+              Stack(
+                children: [
+                  // 1. Gambar Destinasi
+                  wisata['img'].toString().isNotEmpty
+                      ? Image.network(
+                          wisata['img'],
+                          height: 220, // Sedikit lebih tinggi
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          height: 220,
+                          width: double.infinity,
+                          color: _mintGreen,
+                          child: Center(child: Text(wisata['icon'], style: const TextStyle(fontSize: 50))),
+                        ),
+                  
+                  // 2. Gradient Overlay Atas (Agar Badge Kategori terbaca)
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.center,
+                          colors: [
+                            Colors.black.withOpacity(0.3),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),
-                    Positioned(top: 20, right: 20, child: _glassBadge(wisata['kategori'])),
-                  ],
-                ),
-                
-                // Content Section
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  wisata['name'],
-                                  style: TextStyle(color: _charcoal, fontSize: 22, fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.location_on_rounded, size: 16, color: _tealAccent),
-                                    const SizedBox(width: 4),
-                                    Text(wisata['loc'], style: TextStyle(color: _charcoal.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                  ),
+
+                  // 3. Badge Kategori (Pojok Kanan Atas)
+                  Positioned(top: 20, right: 20, child: _glassBadge(wisata['kategori'])),
+                ],
+              ),
+              
+              // Bagian Konten (Tetap sama, tapi perhatikan kontras warna _charcoal)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Mulai dari", style: TextStyle(color: _charcoal.withOpacity(0.4), fontSize: 10)),
-                              Text(wisata['harga'], style: TextStyle(color: _tealAccent, fontWeight: FontWeight.w900, fontSize: 16)),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Pesan Tiket Button - Refreshing Mint Gradient
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          _showCheckoutSheet(wisata);
-                        },
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [const Color(0xFF1ABC9C), const Color(0xFF3498DB).withOpacity(0.8)],
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _tealAccent.withOpacity(0.25),
-                                blurRadius: 15,
-                                offset: const Offset(0, 8),
+                              Text(
+                                wisata['name'],
+                                style: TextStyle(
+                                  color: _charcoal, 
+                                  fontSize: 22, 
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_rounded, size: 16, color: _tealAccent),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    wisata['loc'], 
+                                    style: TextStyle(
+                                      color: _charcoal.withOpacity(0.6), // Lebih gelap sedikit
+                                      fontSize: 13, 
+                                      fontWeight: FontWeight.w500
+                                    )
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                          child: const Center(
-                            child: Text(
-                              "PESAN TIKET",
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1.2, fontSize: 14),
-                            ),
-                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        // Harga
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text("Mulai dari", style: TextStyle(color: _charcoal.withOpacity(0.4), fontSize: 10)),
+                            Text(
+                              wisata['harga'], 
+                              style: TextStyle(color: _tealAccent, fontWeight: FontWeight.w900, fontSize: 18)
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Tombol Pesan
+                    _buildAnimatedOrderButton(wisata),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+// Fungsi tambahan untuk tombol yang lebih interaktif
+Widget _buildAnimatedOrderButton(Map<String, dynamic> wisata) {
+  return InkWell(
+    onTap: () {
+      HapticFeedback.mediumImpact();
+      _showCheckoutSheet(wisata);
+    },
+    borderRadius: BorderRadius.circular(20),
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1ABC9C), Color(0xFF16A085)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _tealAccent.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: Text(
+          "PESAN TIKET SEKARANG",
+          style: TextStyle(
+            color: Colors.white, 
+            fontWeight: FontWeight.w900, 
+            letterSpacing: 1.5, 
+            fontSize: 13
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
   Widget _glassBadge(String label) {
     return ClipRRect(

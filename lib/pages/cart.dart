@@ -3,6 +3,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
 import 'package:flutter_application_2/pages/booking_page.dart';
 import 'package:flutter_application_2/services/api_service.dart';
+
+// ── Brand color palette (matching Tiket page: teal/mint/sage green) ──
+class _C {
+  static const primary      = Color(0xFF2DB89A); // teal hijau utama
+  static const primaryLight = Color(0xFF4ECFB5); // teal terang
+  static const primaryDark  = Color(0xFF1A9A80); // teal gelap
+  static const accent       = Color(0xFF00C9A7); // mint accent
+  static const surface      = Color(0xFFEFF9F6); // latar belakang mint pucat
+  static const cardBg       = Colors.white;
+  static const headerStart  = Color(0xFF2DB89A);
+  static const headerEnd    = Color(0xFF7EDDD0);
+  static const textPrimary  = Color(0xFF1A2E2A);
+  static const textSecondary= Color(0xFF6B8C85);
+  static const borderGlass  = Color(0xFFB2E4DA);
+  static const redDelete    = Color(0xFFFF5C6A);
+}
+
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -10,33 +27,38 @@ class CartPage extends StatefulWidget {
   State<CartPage> createState() => _CartPageState();
 }
 
-class _CartPageState extends State<CartPage> {
+class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   DateTime? _tanggalMulai;
   DateTime? _tanggalSelesai;
 
-  // ✅ DITAMBAH: state untuk data dari backend
   List<Map<String, dynamic>> _backendItems = [];
   bool _loadingCart = true;
+
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
     CartModel.instance.addListener(_refresh);
-    _loadCartFromBackend(); // ✅ DITAMBAH: load data backend saat buka halaman
+    _loadCartFromBackend();
+
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeCtrl.forward();
   }
 
-  // ✅ DITAMBAH: fungsi load cart dari backend
   Future<void> _loadCartFromBackend() async {
     setState(() => _loadingCart = true);
     final data = await ApiService.getCart();
     setState(() {
       _backendItems = data;
       _loadingCart = false;
-
-      // Sync ke CartModel lokal supaya checkout tetap jalan
       CartModel.instance.clear();
       for (final item in data) {
-        // ✅ FIX: format harga dari int (50000) ke string rupiah (Rp 50.000)
         final priceInt = int.tryParse((item['price'] ?? 0).toString()) ?? 0;
         final hargaStr = _formatRupiah(priceInt);
         CartModel.instance.addItemWithQuantity({
@@ -48,6 +70,7 @@ class _CartPageState extends State<CartPage> {
         }, int.tryParse(item['quantity'].toString()) ?? 1);
       }
     });
+    _fadeCtrl.forward(from: 0);
   }
 
   void _refresh() => setState(() {});
@@ -55,6 +78,7 @@ class _CartPageState extends State<CartPage> {
   @override
   void dispose() {
     CartModel.instance.removeListener(_refresh);
+    _fadeCtrl.dispose();
     super.dispose();
   }
 
@@ -96,10 +120,10 @@ class _CartPageState extends State<CartPage> {
               builder: (context, child) => Theme(
                 data: Theme.of(context).copyWith(
                   colorScheme: const ColorScheme.light(
-                    primary: Colors.deepOrange,
+                    primary: _C.primary,
                     onPrimary: Colors.white,
                     surface: Colors.white,
-                    onSurface: Color(0xFF1A1A1A),
+                    onSurface: _C.textPrimary,
                   ),
                 ),
                 child: child!,
@@ -152,401 +176,434 @@ class _CartPageState extends State<CartPage> {
 
           final durasi = hitungDurasi();
 
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: EdgeInsets.fromLTRB(
-              24,
-              12,
-              24,
-              MediaQuery.of(context).viewInsets.bottom + 32,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Handle bar
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Icon konfirmasi
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.deepOrange.shade700,
-                          Colors.orange.shade400
-                        ],
+          return ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.96),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: _C.borderGlass.withOpacity(0.4)),
+                ),
+                padding: EdgeInsets.fromLTRB(
+                  24, 12, 24,
+                  MediaQuery.of(context).viewInsets.bottom + 36,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Handle bar
+                      Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: _C.borderGlass,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_rounded,
-                        color: Colors.white, size: 36),
-                  ),
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 24),
 
-                  const Text(
-                    "Konfirmasi Pesanan",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A1A1A),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                 Text(
-  "${CartModel.instance.totalItems} tiket · ${_formatRupiah(CartModel.instance.totalHarga)}",
-  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-),
-const SizedBox(height: 6),
-Row(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-    Icon(Icons.info_outline_rounded, size: 12, color: Colors.orange.shade400),
-    const SizedBox(width: 4),
-    Text(
-      "Batas kunjungan 7 hari",
-      style: TextStyle(
-        fontSize: 12,
-        color: Colors.orange.shade600,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  ],
-),
-const SizedBox(height: 24),
+                      // Ikon konfirmasi
+                      Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [_C.primaryDark, _C.primaryLight],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: _C.primary.withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.check_rounded,
+                            color: Colors.white, size: 34),
+                      ),
+                      const SizedBox(height: 16),
 
-                  // ── FORM PEMILIHAN TANGGAL ──
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.orange.shade100),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                      const Text(
+                        "Konfirmasi Pesanan",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _C.textPrimary,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "${CartModel.instance.totalItems} tiket · ${_formatRupiah(CartModel.instance.totalHarga)}",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: _C.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _C.primary.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.calendar_month_rounded,
-                                size: 16, color: Colors.deepOrange.shade700),
-                            const SizedBox(width: 6),
+                            Icon(Icons.access_time_rounded,
+                                size: 12, color: _C.primaryDark),
+                            const SizedBox(width: 5),
                             Text(
-                              "Tanggal Kunjungan",
+                              "Batas kunjungan 7 hari",
                               style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.deepOrange.shade700,
+                                fontSize: 11,
+                                color: _C.primaryDark,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                      ),
+                      const SizedBox(height: 24),
 
-                        // Baris tanggal mulai & selesai
-                        Row(
+                      // ── FORM TANGGAL ──
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _C.surface,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: _C.borderGlass, width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Tanggal Mulai
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => pilihTanggal(isStart: true),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: tanggalMulai != null
-                                          ? Colors.deepOrange
-                                          : Colors.grey.shade300,
-                                      width: tanggalMulai != null ? 1.5 : 1,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Mulai",
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey.shade500,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        formatTanggal(tanggalMulai),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: tanggalMulai != null
-                                              ? Colors.deepOrange
-                                              : Colors.grey.shade400,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8),
-                              child: Icon(Icons.arrow_forward_rounded,
-                                  size: 16, color: Colors.grey.shade400),
-                            ),
-
-                            // Tanggal Selesai
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: tanggalMulai == null
-                                    ? null
-                                    : () => pilihTanggal(isStart: false),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: tanggalMulai == null
-                                        ? Colors.grey.shade50
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: tanggalSelesai != null
-                                          ? Colors.deepOrange
-                                          : Colors.grey.shade300,
-                                      width: tanggalSelesai != null ? 1.5 : 1,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Selesai",
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey.shade500,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        tanggalMulai == null
-                                            ? 'Pilih mulai dulu'
-                                            : formatTanggal(tanggalSelesai),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: tanggalSelesai != null
-                                              ? Colors.deepOrange
-                                              : Colors.grey.shade400,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Info durasi
-                        if (durasi > 0) ...[
-                          const SizedBox(height: 10),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.deepOrange.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
+                            Row(
                               children: [
-                                Icon(Icons.info_outline_rounded,
-                                    size: 14,
-                                    color: Colors.deepOrange.shade600),
+                                const Icon(Icons.calendar_month_rounded,
+                                    size: 15, color: _C.primaryDark),
                                 const SizedBox(width: 6),
+                                const Text(
+                                  "Tanggal Kunjungan",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: _C.primaryDark,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            Row(
+                              children: [
+                                // Tanggal Mulai
                                 Expanded(
-                                  child: Text(
-                                    "$durasi hari kunjungan  ·  "
-                                    "${namaHari(tanggalMulai!)} – ${namaHari(tanggalSelesai!)}",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.deepOrange.shade700,
+                                  child: GestureDetector(
+                                    onTap: () => pilihTanggal(isStart: true),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: tanggalMulai != null
+                                              ? _C.primary
+                                              : _C.borderGlass,
+                                          width: tanggalMulai != null ? 1.5 : 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Mulai",
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: _C.textSecondary
+                                                  .withOpacity(0.7),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            formatTanggal(tanggalMulai),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: tanggalMulai != null
+                                                  ? _C.primary
+                                                  : _C.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8),
+                                  child: Icon(Icons.arrow_forward_rounded,
+                                      size: 16,
+                                      color: _C.textSecondary.withOpacity(0.5)),
+                                ),
+
+                                // Tanggal Selesai
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: tanggalMulai == null
+                                        ? null
+                                        : () => pilihTanggal(isStart: false),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: tanggalMulai == null
+                                            ? _C.surface
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: tanggalSelesai != null
+                                              ? _C.primary
+                                              : _C.borderGlass,
+                                          width:
+                                              tanggalSelesai != null ? 1.5 : 1,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "Selesai",
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: _C.textSecondary
+                                                  .withOpacity(0.7),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            tanggalMulai == null
+                                                ? 'Pilih mulai dulu'
+                                                : formatTanggal(tanggalSelesai),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: tanggalSelesai != null
+                                                  ? _C.primary
+                                                  : _C.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
 
-                        // Petunjuk jika belum pilih
-                        if (durasi == 0) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            "Pilih tanggal mulai dan selesai kunjungan wisata",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  // ── AKHIR FORM TANGGAL ──
-
-                  const SizedBox(height: 20),
-
-                  // Ringkasan item
-                  ...CartModel.instance.items.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.deepOrange.shade700,
-                                    Colors.orange.shade400
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                            if (durasi > 0) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _C.primary.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                borderRadius: BorderRadius.circular(10),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline_rounded,
+                                        size: 14, color: _C.primaryDark),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        "$durasi hari kunjungan  ·  "
+                                        "${namaHari(tanggalMulai!)} – ${namaHari(tanggalSelesai!)}",
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: _C.primaryDark,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              child: const Icon(
-                                  Icons.confirmation_number_rounded,
-                                  color: Colors.white,
-                                  size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(item.name,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF1A1A1A)),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                  Text("${item.quantity}x · ${item.loc}",
-                                      style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey.shade400)),
-                                ],
+                            ],
+
+                            if (durasi == 0) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                "Pilih tanggal mulai dan selesai kunjungan wisata",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _C.textSecondary.withOpacity(0.7),
+                                ),
                               ),
-                            ),
-                            Text(
-                              _formatRupiah(item.subtotal),
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.deepOrange),
-                            ),
+                            ],
                           ],
                         ),
-                      )),
+                      ),
 
-                  const SizedBox(height: 8),
-                  Divider(color: Colors.grey.shade200),
-                  const SizedBox(height: 8),
+                      const SizedBox(height: 20),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Total",
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade700)),
-                      Text(
-                        _formatRupiah(CartModel.instance.totalHarga),
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.deepOrange),
+                      // Ringkasan item
+                      ...CartModel.instance.items.map((item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [_C.primaryDark, _C.primaryLight],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                      Icons.confirmation_number_rounded,
+                                      color: Colors.white,
+                                      size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(item.name,
+                                          style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: _C.textPrimary),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis),
+                                      Text("${item.quantity}x · ${item.loc}",
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              color: _C.textSecondary)),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  _formatRupiah(item.subtotal),
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: _C.primary),
+                                ),
+                              ],
+                            ),
+                          )),
+
+                      const SizedBox(height: 8),
+                      Divider(color: _C.borderGlass.withOpacity(0.6)),
+                      const SizedBox(height: 8),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text("Total",
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: _C.textSecondary)),
+                          Text(
+                            _formatRupiah(CartModel.instance.totalHarga),
+                            style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: _C.primary,
+                                letterSpacing: -0.4),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Tombol Bayar
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed:
+                              (tanggalMulai == null || tanggalSelesai == null)
+                                  ? null
+                                  : () {
+                                      Navigator.pop(context);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => BookingPage(
+                                            items: CartModel.instance.items
+                                                .toList(),
+                                            tanggalMulai: tanggalMulai!,
+                                            tanggalSelesai: tanggalSelesai!,
+                                            totalHarga:
+                                                CartModel.instance.totalHarga,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                (tanggalMulai == null || tanggalSelesai == null)
+                                    ? const Color(0xFFD8EDE9)
+                                    : _C.primary,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16)),
+                            elevation: (tanggalMulai == null ||
+                                    tanggalSelesai == null)
+                                ? 0
+                                : 4,
+                            shadowColor: _C.primary.withOpacity(0.3),
+                          ),
+                          child: Text(
+                            (tanggalMulai == null || tanggalSelesai == null)
+                                ? "Pilih Tanggal Dulu"
+                                : "Bayar Sekarang",
+                            style: TextStyle(
+                              color: (tanggalMulai == null ||
+                                      tanggalSelesai == null)
+                                  ? _C.textSecondary
+                                  : Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("Batal",
+                            style: TextStyle(
+                                color: _C.textSecondary,
+                                fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Tombol Bayar
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                     onPressed: (tanggalMulai == null || tanggalSelesai == null)
-    ? null
-    : () {
-        Navigator.pop(context); // tutup modal
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BookingPage(
-              items: CartModel.instance.items.toList(),
-              tanggalMulai: tanggalMulai!,
-              tanggalSelesai: tanggalSelesai!,
-              totalHarga: CartModel.instance.totalHarga,
-            ), 
-          ),
-        );
-      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: (tanggalMulai == null || tanggalSelesai == null)
-                            ? Colors.grey.shade300
-                            : Colors.deepOrange,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        (tanggalMulai == null || tanggalSelesai == null)
-                            ? "Pilih Tanggal Dulu"
-                            : "Bayar Sekarang",
-                        style: TextStyle(
-                          color: (tanggalMulai == null || tanggalSelesai == null)
-                              ? Colors.grey.shade500
-                              : Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text("Batal",
-                        style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                ],
+                ),
               ),
             ),
           );
@@ -560,29 +617,40 @@ const SizedBox(height: 24),
     final items = CartModel.instance.items;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
+      backgroundColor: _C.surface,
       body: Stack(
         children: [
+          // ── Header gradient (teal-mint, mirip screenshot) ──
           Container(
-            height: 240,
-            decoration: BoxDecoration(
+            height: 260,
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Colors.deepOrange.shade800,
-                  Colors.orange.shade400,
-                ],
+                colors: [_C.headerStart, _C.headerEnd],
               ),
             ),
           ),
 
+          // Dekoratif lingkaran glassmorphism di header
           Positioned(
-            top: -40,
-            right: -30,
+            top: -50,
+            right: -40,
             child: Container(
-              width: 160,
-              height: 160,
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.08),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 40,
+            right: 60,
+            child: Container(
+              width: 90,
+              height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withOpacity(0.07),
@@ -590,14 +658,14 @@ const SizedBox(height: 24),
             ),
           ),
           Positioned(
-            top: 30,
-            right: 60,
+            top: 100,
+            left: -20,
             child: Container(
-              width: 80,
-              height: 80,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.07),
+                color: Colors.white.withOpacity(0.05),
               ),
             ),
           ),
@@ -605,6 +673,7 @@ const SizedBox(height: 24),
           SafeArea(
             child: Column(
               children: [
+                // ── APP BAR ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                   child: Row(
@@ -616,13 +685,17 @@ const SizedBox(height: 24),
                         children: [
                           Row(
                             children: [
-                              const Text("🛒 ", style: TextStyle(fontSize: 16)),
+                              Icon(Icons.shopping_bag_outlined,
+                                  size: 14,
+                                  color: Colors.white.withOpacity(0.8)),
+                              const SizedBox(width: 5),
                               Text(
                                 "Keranjang",
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.85),
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
                             ],
@@ -632,14 +705,15 @@ const SizedBox(height: 24),
                             "Tiket Wisatamu",
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: 26,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
+                              letterSpacing: -0.7,
                             ),
                           ),
                         ],
                       ),
 
+                      // Tombol hapus semua
                       if (items.isNotEmpty)
                         GestureDetector(
                           onTap: () {
@@ -647,20 +721,22 @@ const SizedBox(height: 24),
                               context: context,
                               builder: (_) => AlertDialog(
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
+                                    borderRadius: BorderRadius.circular(24)),
                                 title: const Text("Kosongkan Keranjang?",
                                     style: TextStyle(
                                         fontWeight: FontWeight.w800,
-                                        fontSize: 16)),
+                                        fontSize: 16,
+                                        color: _C.textPrimary)),
                                 content: const Text(
                                     "Semua tiket di keranjang akan dihapus.",
-                                    style: TextStyle(fontSize: 13)),
+                                    style: TextStyle(
+                                        fontSize: 13, color: _C.textSecondary)),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: Text("Batal",
+                                    child: const Text("Batal",
                                         style: TextStyle(
-                                            color: Colors.grey.shade600,
+                                            color: _C.textSecondary,
                                             fontWeight: FontWeight.w600)),
                                   ),
                                   ElevatedButton(
@@ -669,10 +745,11 @@ const SizedBox(height: 24),
                                       Navigator.pop(context);
                                     },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
+                                      backgroundColor: _C.redDelete,
                                       shape: RoundedRectangleBorder(
                                           borderRadius:
-                                              BorderRadius.circular(10)),
+                                              BorderRadius.circular(12)),
+                                      elevation: 0,
                                     ),
                                     child: const Text("Hapus",
                                         style: TextStyle(
@@ -683,29 +760,36 @@ const SizedBox(height: 24),
                               ),
                             );
                           },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.18),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                  color: Colors.white.withOpacity(0.3)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.delete_outline_rounded,
-                                    color: Colors.white, size: 18),
-                                const SizedBox(width: 6),
-                                Text(
-                                  "${items.length} item",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: BackdropFilter(
+                              filter:
+                                  ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.18),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color: Colors.white.withOpacity(0.3)),
                                 ),
-                              ],
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.delete_outline_rounded,
+                                        color: Colors.white, size: 17),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      "${items.length} item",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -713,25 +797,30 @@ const SizedBox(height: 24),
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
 
+                // ── CONTENT AREA ──
                 Expanded(
                   child: Container(
                     width: double.infinity,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFF7F7F7),
+                      color: _C.surface,
                       borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
+                        topLeft: Radius.circular(32),
+                        topRight: Radius.circular(32),
                       ),
                     ),
                     child: _loadingCart
                         ? const Center(
-                            child: CircularProgressIndicator(color: Colors.deepOrange),
+                            child: CircularProgressIndicator(
+                                color: _C.primary, strokeWidth: 2.5),
                           )
                         : items.isEmpty
-                        ? _buildEmptyState()
-                        : _buildCartList(items),
+                            ? _buildEmptyState()
+                            : FadeTransition(
+                                opacity: _fadeAnim,
+                                child: _buildCartList(items),
+                              ),
                   ),
                 ),
               ],
@@ -740,81 +829,97 @@ const SizedBox(height: 24),
         ],
       ),
 
+      // ── FLOATING CHECKOUT BAR ──
       bottomNavigationBar: items.isEmpty
           ? null
           : Container(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
               decoration: BoxDecoration(
                 color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
+                    color: _C.primary.withOpacity(0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, -6),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
                   ),
                 ],
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
               ),
               child: Row(
                 children: [
+                  // Total harga
                   Expanded(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           "Total Pembayaran",
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
+                            fontSize: 11,
+                            color: _C.textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
                           _formatRupiah(CartModel.instance.totalHarga),
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: Colors.deepOrange,
-                            letterSpacing: -0.3,
+                            color: _C.primary,
+                            letterSpacing: -0.5,
                           ),
                         ),
                       ],
                     ),
                   ),
 
+                  // Tombol Checkout
                   GestureDetector(
                     onTap: _checkout,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 28, vertical: 14),
+                          horizontal: 30, vertical: 15),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.deepOrange.shade700,
-                            Colors.orange.shade400,
-                          ],
+                        gradient: const LinearGradient(
+                          colors: [_C.primaryDark, _C.primaryLight],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.deepOrange.withOpacity(0.35),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                            color: _C.primary.withOpacity(0.40),
+                            blurRadius: 16,
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
-                      child: const Text(
-                        "Checkout",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "Bayar Sekarang",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward_rounded,
+                              color: Colors.white, size: 16),
+                        ],
                       ),
                     ),
                   ),
@@ -824,26 +929,47 @@ const SizedBox(height: 24),
     );
   }
 
+  // ── CART LIST ──
   Widget _buildCartList(List<CartItem> items) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
       physics: const BouncingScrollPhysics(),
       itemCount: items.length,
-      itemBuilder: (context, index) => _buildCartCard(items[index]),
+      itemBuilder: (context, index) {
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: Duration(milliseconds: 400 + index * 80),
+          curve: Curves.easeOut,
+          builder: (context, val, child) => Opacity(
+            opacity: val,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - val)),
+              child: child,
+            ),
+          ),
+          child: _buildCartCard(items[index]),
+        );
+      },
     );
   }
 
+  // ── CART CARD ──
   Widget _buildCartCard(CartItem item) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: _C.cardBg,
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
+            color: _C.primary.withOpacity(0.07),
+            blurRadius: 20,
             offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -855,19 +981,24 @@ const SizedBox(height: 24),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Ikon tiket
                 Container(
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.deepOrange.shade700,
-                        Colors.orange.shade400,
-                      ],
+                    gradient: const LinearGradient(
+                      colors: [_C.primaryDark, _C.primaryLight],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _C.primary.withOpacity(0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.confirmation_number_rounded,
@@ -878,6 +1009,7 @@ const SizedBox(height: 24),
 
                 const SizedBox(width: 14),
 
+                // Nama & lokasi
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -887,7 +1019,8 @@ const SizedBox(height: 24),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A1A),
+                          color: _C.textPrimary,
+                          letterSpacing: -0.2,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -895,15 +1028,15 @@ const SizedBox(height: 24),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.location_on_rounded,
-                              size: 12, color: Colors.deepOrange.shade300),
+                          const Icon(Icons.location_on_rounded,
+                              size: 12, color: _C.primary),
                           const SizedBox(width: 3),
                           Expanded(
                             child: Text(
                               item.loc,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade500,
+                                color: _C.textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -915,11 +1048,12 @@ const SizedBox(height: 24),
                   ),
                 ),
 
+                // Badge kategori
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.deepOrange.withOpacity(0.08),
+                    color: _C.primary.withOpacity(0.09),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -927,24 +1061,25 @@ const SizedBox(height: 24),
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Colors.deepOrange,
+                      color: _C.primaryDark,
                     ),
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
+            // Dashed divider (tiket style)
             Row(
               children: List.generate(
-                32,
+                36,
                 (i) => Expanded(
                   child: Container(
                     height: 1,
                     color: i % 2 == 0
                         ? Colors.transparent
-                        : Colors.grey.withOpacity(0.2),
+                        : _C.borderGlass.withOpacity(0.6),
                   ),
                 ),
               ),
@@ -954,43 +1089,78 @@ const SizedBox(height: 24),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Total Harga",
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade400,
-                        fontWeight: FontWeight.w500,
+                // Jumlah tiket badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _C.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _C.borderGlass),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.people_alt_outlined,
+                          size: 13, color: _C.primaryDark),
+                      const SizedBox(width: 5),
+                      Text(
+                        "${item.quantity} tiket",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _C.primaryDark,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
+                    ],
+                  ),
+                ),
+
+                // Harga + tombol hapus
+                Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          "Subtotal",
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: _C.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          _formatRupiah(item.subtotal),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: _C.primary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatRupiah(item.subtotal),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.deepOrange,
-                        letterSpacing: -0.3,
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () =>
+                          CartModel.instance.removeItem(item.name),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _C.redDelete.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                        child: Icon(Icons.delete_outline_rounded,
+                            size: 18,
+                            color: _C.redDelete.withOpacity(0.8)),
                       ),
                     ),
                   ],
-                ),
-
-                GestureDetector(
-                  onTap: () => CartModel.instance.removeItem(item.name),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.delete_outline_rounded,
-                        size: 18, color: Colors.red.shade400),
-                  ),
                 ),
               ],
             ),
@@ -1000,6 +1170,7 @@ const SizedBox(height: 24),
     );
   }
 
+  // ── EMPTY STATE ──
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -1009,28 +1180,29 @@ const SizedBox(height: 24),
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.deepOrange.withOpacity(0.07),
+              color: _C.primary.withOpacity(0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.shopping_cart_outlined,
-              size: 48,
-              color: Colors.deepOrange.withOpacity(0.35),
+              Icons.shopping_bag_outlined,
+              size: 46,
+              color: _C.primary.withOpacity(0.35),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
           const Text(
             "Keranjang Kosong",
             style: TextStyle(
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF1A1A1A),
+              color: _C.textPrimary,
+              letterSpacing: -0.4,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
+          const SizedBox(height: 8),
+          const Text(
             "Tambahkan tiket dari halaman wisata",
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+            style: TextStyle(fontSize: 13, color: _C.textSecondary),
           ),
         ],
       ),

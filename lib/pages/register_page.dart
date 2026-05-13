@@ -20,7 +20,7 @@ class _RegisterPageState extends State<RegisterPage> {
   // Palette Warna 2026: Muted & Premium (Konsisten dengan Login)
   static const Color tealDeep = Color(0xFF319795);
   static const Color oceanBlueDeep = Color(0xFF2C5282);
-  static const Color charcoalGrey = Color(0xFF2D3748);
+  static const Color charcoalGrey = Color(0xFFFFFFFF);
 
   void register() async {
     if (fullname.text.isEmpty ||
@@ -62,20 +62,29 @@ class _RegisterPageState extends State<RegisterPage> {
         children: [
           // 1. BACKGROUND: Menggunakan Image yang sama dengan Login agar konsisten
           Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(
-                    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070',
-                  ),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Container(
-                color: Colors.white.withOpacity(0.15),
-              ),
-            ),
-          ),
+  child: Container(
+    decoration: const BoxDecoration(
+      image: DecorationImage(
+        image: NetworkImage(
+          'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070',
+        ),
+        fit: BoxFit.cover,
+      ),
+    ),
+    child: Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withOpacity(0.35),
+            Colors.black.withOpacity(0.60),
+          ],
+        ),
+      ),
+    ),
+  ),
+),
 
           // 2. AMBIENT LIGHTS (Floating Orbs)
           Positioned(top: -50, left: -50, child: _buildAmbientOrb(tealDeep.withOpacity(0.1))),
@@ -99,12 +108,12 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: Container(
                           padding: const EdgeInsets.all(30),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.4),
+                            color: Colors.white.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(45),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.6),
-                              width: 2,
-                            ),
+  color: Colors.white.withOpacity(0.25),
+  width: 1.5,
+),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.08),
@@ -126,11 +135,12 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                "Bergabunglah untuk mulai menjelajah Indonesia",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: charcoalGrey, fontSize: 13),
-                              ),
+                              Text(
+  "Bergabunglah untuk mulai menjelajah Indonesia",
+  textAlign: TextAlign.center,
+  style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
+),
+
                               const SizedBox(height: 30),
 
                               // INPUT FIELDS
@@ -206,7 +216,7 @@ class _RegisterPageState extends State<RegisterPage> {
         Container(
           padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withOpacity(0.10), 
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withOpacity(0.5)),
           ),
@@ -216,7 +226,7 @@ class _RegisterPageState extends State<RegisterPage> {
         const Text(
           "TRIP NUSA DESA",
           style: TextStyle(
-            color: charcoalGrey,
+            color: Colors.white,      
             letterSpacing: 6,
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -233,39 +243,35 @@ class _RegisterPageState extends State<RegisterPage> {
     bool isObscure = false,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: isObscure,
-        style: const TextStyle(color: charcoalGrey, fontWeight: FontWeight.w600),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.black45, fontSize: 14),
-          prefixIcon: Icon(icon, color: tealDeep, size: 20),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: const BorderSide(color: Colors.transparent),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: const BorderSide(color: tealDeep, width: 1.5),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.10),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.white.withOpacity(0.25)),
+    ),
+     child: TextField(
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14),
+        floatingLabelStyle: const TextStyle(
+          color: tealDeep,
+          fontWeight: FontWeight.w800,
+          fontSize: 17,
         ),
+        prefixIcon: Icon(icon, color: tealDeep, size: 20),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: Colors.transparent),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: tealDeep, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildRegisterButton() {
     return Container(
       width: double.infinity,
