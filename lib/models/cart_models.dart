@@ -8,7 +8,16 @@ class CartItem {
   final String harga;
   int quantity;
 
-  CartItem({required this.productId, required this.name, required this.loc, required this.harga, this.quantity = 1});
+  CartItem({
+    required this.productId,
+    required this.name,
+    required this.loc,
+    required this.img,
+    required this.harga,
+    required this.kategori,
+    this.quantity = 1,
+    required this.addedAt,
+  });
 
   int get hargaInt => int.tryParse(harga.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
   int get subtotal => hargaInt * quantity;
@@ -28,11 +37,32 @@ class CartModel extends ChangeNotifier {
     _items.clear();
     for (var item in serverCart) {
       _items.add(CartItem(
-        productId: item['productId'].toString(),
-        name: item['name'] ?? 'Tiket',
-        loc: item['location'] ?? 'Lampung',
-        harga: item['price'].toString(),
-        quantity: item['quantity'] ?? 1,
+        productId: data['productId'] ?? '',
+        name: data['name'] ?? '',
+        loc: data['loc'] ?? '',
+        img: data['img'] ?? '',
+        harga: data['harga'] ?? '',
+        kategori: data['kategori'] ?? '',
+        addedAt: DateTime.now(),
+      ));
+    }
+    notifyListeners();
+  }
+
+  // ✅ DITAMBAH: tambah item dengan quantity langsung (dipakai dari tiket_page)
+  void addItemWithQuantity(Map<String, String> data, int qty) {
+    final existing = _items.where((i) => i.name == data['name']).toList();
+    if (existing.isNotEmpty) {
+      existing.first.quantity += qty;
+    } else {
+      _items.add(CartItem(
+        productId: data['productId'] ?? '',
+        name: data['name'] ?? '',
+        loc: data['loc'] ?? '',
+        harga: data['harga'] ?? '',
+        kategori: data['kategori'] ?? '',
+        quantity: qty,
+        addedAt: DateTime.now(),
       ));
     }
     notifyListeners();

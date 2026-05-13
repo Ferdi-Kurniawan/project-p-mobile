@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_application_2/pages/profile.dart';
+import 'package:flutter_application_2/pages/profile_admin_page.dart';
+import 'package:flutter_application_2/pages/home_page.dart';
 
 class CheckSessionPage extends StatefulWidget {
   const CheckSessionPage({super.key});
@@ -18,9 +21,26 @@ class _CheckSessionPageState extends State<CheckSessionPage> {
   void checkLogin() async {
     final prefs = await SharedPreferences.getInstance();
     String? role = prefs.getString('role');
+    String fullname = prefs.getString('fullname') ?? '';
+    String email = prefs.getString('email') ?? '';
 
-    if (role != null) {
-      Navigator.pushReplacementNamed(context, '/home');
+    if (role == 'ADMIN') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileAdminPage()),
+      );
+    } else if (role == 'USER') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfilePage(
+            userData: {
+              'fullname': fullname,
+              'email': email,
+            },
+          ),
+        ),
+      );
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }

@@ -4,9 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
 
 class ApiService {
-  // 🔥 IP 10.0.2.2 khusus untuk Emulator Android terhubung ke localhost laptop
-  static const String baseUrl = "http://10.0.2.2:3001";
+  static const String baseUrl = "http://127.0.0.1:3000";
   static Map<String, dynamic>? userData;
+
+  static final http.Client _client = http.Client();
 
   // ================= REGISTER =================
   static Future<bool> register(
@@ -16,7 +17,7 @@ class ApiService {
     String password,
   ) async {
     try {
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse("$baseUrl/users"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
@@ -27,12 +28,12 @@ class ApiService {
         }),
       );
 
-      print("REGISTER STATUS: ${response.statusCode}");
-      print("REGISTER BODY: ${response.body}");
+      print("REGISTER: ${response.statusCode}");
+      print(response.body);
 
       return response.statusCode == 201;
     } catch (e) {
-      print("ERROR REGISTER: $e");
+      print("REGISTER ERROR: $e");
       return false;
     }
   }
@@ -43,11 +44,10 @@ class ApiService {
     String password,
   ) async {
     try {
-      // Kita pakai Client khusus agar tidak otomatis ter-redirect jika kena 302
-      final client = http.Client();
-      final request = http.Request('POST', Uri.parse("$baseUrl/users/login"))
-        ..headers['Content-Type'] = 'application/json'
-        ..body = jsonEncode({
+      final response = await http.post(
+        Uri.parse("$baseUrl/users/login"), // 🔥 INI YANG PENTING
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
           "email": email,
           "password": password,
         });
@@ -56,13 +56,7 @@ class ApiService {
       final response = await http.Response.fromStream(streamedResponse);
 
       print("LOGIN STATUS: ${response.statusCode}");
-      print("LOGIN HEADERS: ${response.headers}");
-      
-      // 🔥 BILA KENA 302, KITA LACAK DILEMPAR KE MANA:
-      if (response.statusCode == 302 || response.statusCode == 301) {
-        print("🚨 TERDETEKSI REDIRECT 302!");
-        print("🚨 DILEMPAR KE: ${response.headers['location']}");
-      }
+      print("LOGIN BODY: ${response.body}");
 
       if (response.statusCode == 200) {
         // 🔥 TANGKAP COOKIE SESSION DARI BACKEND
@@ -80,225 +74,208 @@ class ApiService {
         }
 
         final data = jsonDecode(response.body);
+
         userData = data["data"]["user"];
+
         return data["data"]["user"];
       }
     } catch (e) {
-      print("ERROR LOGIN: $e");
+      print("LOGIN ERROR: $e");
     }
 
     return null;
   }
 
-static Future<bool> addToRedisCart(String productId, int quantity) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final sessionCookie = prefs.getString('cookie');
-
-    final response = await http.post(
-      Uri.parse("$baseUrl/booking/add-item"),
-      headers: {
-        "Content-Type": "application/json",
-        if (sessionCookie != null) "Cookie": sessionCookie,
-      },
-      body: jsonEncode({
-        "productId": productId,
-        "quantity": quantity,
-      }),
-    );
-    print("ADD TO CART STATUS: ${response.statusCode}");
-    print("ADD TO CART BODY: ${response.body}");
-    return response.statusCode == 200;
-  } catch (e) {
-    print("Error sync Redis: $e");
-    return false;
-  }
-}
-
-static Future<bool> removeFromRedisCart(String productId) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final sessionCookie = prefs.getString('cookie');
-
-    final response = await http.post(
-      Uri.parse("$baseUrl/booking/remove-item"),
-      headers: {
-        "Content-Type": "application/json",
-        if (sessionCookie != null) "Cookie": sessionCookie,
-      },
-      body: jsonEncode({"productId": productId}),
-    );
-    return response.statusCode == 200;
-  } catch (e) {
-    return false;
-  }
-}
-
-  // ================= 1. BUAT DRAFT BOOKING (Dari Cart) =================
-  static Future<String?> createDraftBooking(
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
+  // ================= GET PRODUCTS =================
+  static Future<List<dynamic>> getProducts() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final sessionCookie = prefs.getString('cookie');
-
-      print("MENGIRIM REQUEST DRAFT DENGAN COOKIE: $sessionCookie");
-
-      final response = await http.post(
-        Uri.parse("$baseUrl/booking"),
-        headers: {
-          "Content-Type": "application/json",
-          // 🔥 Kirim Cookie, bukan Bearer Token
-          if (sessionCookie != null) "Cookie": sessionCookie,
-        },
-        body: jsonEncode({
-          "startDate": startDate.toIso8601String(),
-          "endDate": endDate.toIso8601String(),
-          // Items tidak dikirim karena backend ambil dari Redis
-        }),
+      final response = await _client.get(
+        Uri.parse("$baseUrl/products"),
       );
 
-      print("CREATE DRAFT STATUS: ${response.statusCode}");
-      print("CREATE DRAFT BODY: ${response.body}");
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data']['id'].toString();
-      }
-      return null;
-    } catch (e) {
-      print("ERROR CREATE DRAFT: $e");
-      return null;
-    }
-  }
-
-  // ================= 2. UPDATE PEMBAYARAN BOOKING (Konfirmasi Bayar) =================
-  static Future<bool> updatePaymentBooking(
-    String bookingId,
-    String paymentMethod,
-  ) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final sessionCookie = prefs.getString('cookie');
-
-      final response = await http.put(
-        Uri.parse("$baseUrl/booking/$bookingId/payment"),
-        headers: {
-          "Content-Type": "application/json",
-          // 🔥 Kirim Cookie, bukan Bearer Token
-          if (sessionCookie != null) "Cookie": sessionCookie,
-        },
-        body: jsonEncode({
-          "paymentMethod": paymentMethod,
-          "status": "PENDING_VERIFICATION",
-        }),
-      );
-
-      print("UPDATE PAYMENT STATUS: ${response.statusCode}");
-      print("UPDATE PAYMENT BODY: ${response.body}");
-
-      return response.statusCode == 200 || response.statusCode == 201;
-    } catch (e) {
-      print("ERROR UPDATE PAYMENT: $e");
-      return false;
-    }
-  }
-
-static Future<List<dynamic>> getProducts() async {
-  try {
-    final response = await http.get(Uri.parse("$baseUrl/product")); 
-
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-      
-      // Berdasarkan kode Express kamu, strukturnya adalah:
-      // decoded['data']['product']
-      if (decoded is Map && decoded.containsKey('data')) {
-        final dataWrapper = decoded['data'];
-        if (dataWrapper is Map && dataWrapper.containsKey('product')) {
-          return dataWrapper['product'] as List<dynamic>;
-        }
-      }
-      
-      // Fallback jika strukturnya berbeda
-      if (decoded is List) return decoded;
-      
-      return [];
-    } else {
-      return [];
-    }
-  } catch (e) {
-    print("ERROR GET PRODUCTS: $e");
-    return [];
-  }
-}
-
-  // ================= AMBIL DATA KERANJANG DARI REDIS =================
-  static Future<List<dynamic>> fetchCartFromServer() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final sessionCookie = prefs.getString('cookie');
-
-      final response = await http.get(
-        Uri.parse("$baseUrl/booking/cart"), // Sesuaikan route routerBooking kamu
-        headers: {
-          if (sessionCookie != null) "Cookie": sessionCookie,
-        },
-      );
-
-      print("FETCH CART STATUS: ${response.statusCode}");
-      print("FETCH CART BODY: ${response.body}");
+      print("GET PRODUCTS: ${response.statusCode}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        // Sesuai respons Express kamu: { "cart": [...] }
-        return decoded['cart'] ?? [];
+        final data = jsonDecode(response.body);
+
+        if (data is Map && data['data'] != null) {
+          final inner = data['data'];
+
+          if (inner is Map && inner['product'] != null) {
+            return List<dynamic>.from(inner['product']);
+          }
+
+          if (inner is List) {
+            return List<dynamic>.from(inner);
+          }
+        }
+
+        if (data is List) {
+          return List<dynamic>.from(data);
+        }
       }
-      return [];
     } catch (e) {
-      print("ERROR FETCH CART: $e");
-      return [];
+      print("GET PRODUCTS ERROR: $e");
     }
+
+    return [];
   }
 
-
-
-  // ================= KOSONGKAN KERANJANG =================
-  static Future<bool> clearCart() async {
+  // ================= ADD TO CART =================
+  static Future<bool> addToCart(
+    String productId,
+    int quantity,
+  ) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final sessionCookie = prefs.getString('cookie');
-
-      final response = await http.post(
-        Uri.parse("$baseUrl/booking/clear-cart"),
-        headers: {
-          if (sessionCookie != null) "Cookie": sessionCookie,
-        },
+      final response = await _client.post(
+        Uri.parse("$baseUrl/booking/add-item"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "productId": productId,
+          "quantity": quantity,
+        }),
       );
+
+      print("ADD CART STATUS: ${response.statusCode}");
+      print("ADD CART BODY: ${response.body}");
+
       return response.statusCode == 200;
     } catch (e) {
-      print("ERROR CLEAR CART: $e");
+      print("ADD CART ERROR: $e");
       return false;
     }
   }
 
-  // ================= LOGOUT =================
-  static Future<bool> logout() async {
+  // ================= GET CART =================
+  static Future<List<Map<String, dynamic>>> getCart() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final sessionCookie = prefs.getString('cookie');
-      await http.post(Uri.parse("$baseUrl/users/logout"), headers: { if (sessionCookie != null) "Cookie": sessionCookie });
-      await prefs.remove('cookie');
-      await prefs.remove('role');
-      await prefs.remove('fullname');
-      await prefs.remove('email');
-      userData = null;
-      CartModel.instance.clearLocal();
-      return true;
+      final response = await _client.get(
+        Uri.parse("$baseUrl/booking/cart"),
+      );
+
+      print("GET CART: ${response.statusCode}");
+      print("GET CART BODY: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data is Map && data['cart'] != null) {
+          return List<Map<String, dynamic>>.from(data['cart']);
+        }
+
+        if (data is Map && data['data'] != null) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        }
+      }
     } catch (e) {
-      print("ERROR LOGOUT: $e");
+      print("GET CART ERROR: $e");
+    }
+
+    return [];
+  }
+
+  // ================= REMOVE FROM CART =================
+  static Future<bool> removeFromCart(String productId) async {
+    try {
+      final response = await _client.post(
+        Uri.parse("$baseUrl/booking/remove-item"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "productId": productId,
+        }),
+      );
+
+      print("REMOVE CART: ${response.statusCode}");
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("REMOVE CART ERROR: $e");
       return false;
     }
+  }
+
+  // ================= CLEAR CART =================
+  static Future<bool> clearCart() async {
+    try {
+      final response = await _client.post(
+        Uri.parse("$baseUrl/booking/clear-cart"),
+      );
+
+      print("CLEAR CART: ${response.statusCode}");
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("CLEAR CART ERROR: $e");
+      return false;
+    }
+  }
+
+  // ================= CREATE BOOKING =================
+  static Future<Map<String, dynamic>?> createBooking({
+    required String startDate,
+    required String endDate,
+  }) async {
+    try {
+      final response = await _client.post(
+        Uri.parse("$baseUrl/booking"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "startDate": startDate,
+          "endDate": endDate,
+        }),
+      );
+
+      print("CREATE BOOKING STATUS: ${response.statusCode}");
+      print("CREATE BOOKING BODY: ${response.body}");
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+
+        return data['data'] as Map<String, dynamic>?;
+      }
+    } catch (e) {
+      print("CREATE BOOKING ERROR: $e");
+    }
+
+    return null;
+  }
+
+
+   static Future<bool> checkout(CartModel cart) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    
+    // Catatan: Backend saat ini menggunakan Session (Cookie), 
+    // jika Anda ingin menggunakan Token/Bearer, pastikan backend sudah mendukungnya.
+    
+    final response = await http.post(
+      Uri.parse("$baseUrl/booking"), // Menyesuaikan dengan route backend '/booking'
+      headers: {
+        "Content-Type": "application/json",
+        if (token != null) "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({
+        "startDate": DateTime.now().toIso8601String(), // Backend booking butuh startDate/endDate
+        "endDate": DateTime.now().add(const Duration(days: 1)).toIso8601String(),
+        "userId": userData?['id'],
+        "items": cart.items.map((item) {
+          return {
+            "name": item.name,
+            "price": item.hargaInt,
+            "quantity": item.quantity,
+            "total": item.subtotal,
+            "productId": item.productId 
+          };
+        }).toList()
+      }),
+    );
+
+    print("CHECKOUT STATUS: ${response.statusCode}");
+    print("CHECKOUT BODY: ${response.body}");
+    return response.statusCode == 201;
   }
 }
