@@ -5,7 +5,10 @@ class CartItem {
   final String productId;
   final String name;
   final String loc;
+  final String img;
   final String harga;
+  final String kategori;
+  final DateTime? addedAt;
   int quantity;
 
   CartItem({
@@ -16,7 +19,7 @@ class CartItem {
     required this.harga,
     required this.kategori,
     this.quantity = 1,
-    required this.addedAt,
+    this.addedAt,
   });
 
   int get hargaInt => int.tryParse(harga.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
@@ -35,16 +38,19 @@ class CartModel extends ChangeNotifier {
 
   void updateItemsFromServer(List<dynamic> serverCart) {
     _items.clear();
-    for (var item in serverCart) {
-      _items.add(CartItem(
-        productId: data['productId'] ?? '',
-        name: data['name'] ?? '',
-        loc: data['loc'] ?? '',
-        img: data['img'] ?? '',
-        harga: data['harga'] ?? '',
-        kategori: data['kategori'] ?? '',
-        addedAt: DateTime.now(),
-      ));
+    for (var data in serverCart) {
+      if (data is Map) {
+        _items.add(CartItem(
+          productId: (data['productId'] ?? '').toString(),
+          name: data['name']?.toString() ?? '',
+          loc: data['loc']?.toString() ?? '',
+          img: data['img']?.toString() ?? '',
+          harga: (data['price'] ?? data['harga'] ?? '0').toString(),
+          kategori: data['kategori']?.toString() ?? '',
+          quantity: data['quantity'] ?? 1,
+          addedAt: DateTime.now(),
+        ));
+      }
     }
     notifyListeners();
   }
@@ -59,6 +65,7 @@ class CartModel extends ChangeNotifier {
         productId: data['productId'] ?? '',
         name: data['name'] ?? '',
         loc: data['loc'] ?? '',
+        img: data['img'] ?? '',
         harga: data['harga'] ?? '',
         kategori: data['kategori'] ?? '',
         quantity: qty,
@@ -72,8 +79,8 @@ class CartModel extends ChangeNotifier {
     final String? pId = data['productId'];
     if (pId == null || pId.isEmpty) return;
 
-    bool success = await ApiService.addToRedisCart(pId, qty);
-    print("Add to Redis Cart Success: $success");
+    bool success = await ApiService.addToCart(pId, qty);
+    print("Add to Cart Success: $success");
     if (success) {
       final idx = _items.indexWhere((i) => i.productId == pId);
       print("Item index in local list: $idx");
@@ -84,7 +91,9 @@ class CartModel extends ChangeNotifier {
           productId: pId,
           name: data['name'] ?? '',
           loc: data['loc'] ?? '',
+          img: data['img'] ?? '',
           harga: data['hargaNum'] ?? '0',
+          kategori: data['kategori'] ?? '',
           quantity: qty,
         ));
       }
@@ -93,7 +102,7 @@ class CartModel extends ChangeNotifier {
   }
 
   Future<void> removeItem(String productId) async {
-    if (await ApiService.removeFromRedisCart(productId)) {
+    if (await ApiService.removeFromCart(productId)) {
       _items.removeWhere((i) => i.productId == productId);
       notifyListeners();
     }

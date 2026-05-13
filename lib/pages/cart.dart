@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
 import 'package:flutter_application_2/pages/booking_page.dart';
+import 'package:flutter_application_2/services/api_service.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -13,16 +14,31 @@ class _CartPageState extends State<CartPage> {
   DateTime? _tanggalMulai;
   DateTime? _tanggalSelesai;
 
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
     CartModel.instance.addListener(_refresh);
+    _syncCartFromServer();
+  }
+
+  Future<void> _syncCartFromServer() async {
+    try {
+      final serverCart = await ApiService.getCart();
+      if (serverCart.isNotEmpty) {
+        CartModel.instance.updateItemsFromServer(serverCart);
+      }
+    } catch (e) {
+      print("SYNC CART ERROR: $e");
+    }
   }
 
   @override
   void dispose() {
     CartModel.instance.removeListener(_refresh);
-    _fadeCtrl.dispose();
     super.dispose();
   }
 

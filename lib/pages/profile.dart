@@ -1,4 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
+import 'login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.userData});
@@ -12,6 +16,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   bool _notifEnabled = true;
+  bool _darkMode = false;
   bool _editingEmail = false;
   bool _editingPhone = false;
   bool _editingPassword = false;
@@ -118,9 +123,9 @@ class _ProfilePageState extends State<ProfilePage>
                   onPressed: () async {
                     Navigator.pop(ctx); // tutup dialog
 
-                    // Hapus semua data sesi dari SharedPreferences
-                
-                    // Tambahkan key lain yang perlu dihapus sesuai kebutuhan
+                    await ApiService.logout();
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear();
 
                     if (!mounted) return;
 
@@ -162,75 +167,79 @@ class _ProfilePageState extends State<ProfilePage>
     final String fullname = widget.userData['fullname'] ?? 'Penjelajah';
 
     return Scaffold(
-      body: Stack(
-        children: [
-          _buildHeader(fullname, email),
-          const SizedBox(height: 24),
+      backgroundColor: const Color(0xFFF7F7F7),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 36),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProfileHero(fullname),
+            const SizedBox(height: 24),
 
-          _buildSectionLabel("Aktivitas"),
-          _buildMenuCard(
-            Icons.favorite_outline,
-            "Wisata Favorit",
-            subtitle: "Lihat daftar favorit kamu",
-          ),
-          _buildMenuCard(
-            Icons.receipt_long_outlined,
-            "Riwayat Tiket",
-            subtitle: "Cek tiket yang pernah dibeli",
-          ),
+            _buildSectionHeader("Aktivitas"),
+            _buildMenuCard(
+              Icons.favorite_outline,
+              "Wisata Favorit",
+              subtitle: "Lihat daftar favorit kamu",
+            ),
+            _buildMenuCard(
+              Icons.receipt_long_outlined,
+              "Riwayat Tiket",
+              subtitle: "Cek tiket yang pernah dibeli",
+              onTap: () => _showBookingHistory(),
+            ),
 
-          const SizedBox(height: 8),
-          _buildSectionLabel("Pengaturan Akun"),
-          _buildMenuCard(
-            Icons.person_outline_rounded,
-            "Edit Profil",
-            subtitle: "Ubah nama dan informasi akun",
-          ),
-          _buildMenuCard(
-            Icons.lock_outline_rounded,
-            "Ubah Password",
-            subtitle: "Perbarui kata sandi kamu",
-          ),
+            const SizedBox(height: 8),
+            _buildSectionHeader("Pengaturan Akun"),
+            _buildMenuCard(
+              Icons.person_outline_rounded,
+              "Edit Profil",
+              subtitle: "Ubah nama dan informasi akun",
+            ),
+            _buildMenuCard(
+              Icons.lock_outline_rounded,
+              "Ubah Password",
+              subtitle: "Perbarui kata sandi kamu",
+            ),
 
-          const SizedBox(height: 8),
-          _buildSectionLabel("Preferensi"),
-          _buildToggleCard(
-            Icons.notifications_outlined,
-            "Notifikasi",
-            subtitle: "Aktifkan pemberitahuan",
-            value: _notifEnabled,
-            onChanged: (val) => setState(() => _notifEnabled = val),
-          ),
-          _buildToggleCard(
-            Icons.dark_mode_outlined,
-            "Mode Gelap",
-            subtitle: "Ubah tema tampilan",
-            value: _darkMode,
-            onChanged: (val) => setState(() => _darkMode = val),
-          ),
-          _buildLanguageCard(),
+            const SizedBox(height: 8),
+            _buildSectionHeader("Preferensi"),
+            _buildToggleCard(
+              icon: Icons.notifications_outlined,
+              label: "Notifikasi",
+              subtitle: "Aktifkan pemberitahuan",
+              value: _notifEnabled,
+              onChanged: (val) => setState(() => _notifEnabled = val),
+            ),
+            _buildToggleCard(
+              icon: Icons.dark_mode_outlined,
+              label: "Mode Gelap",
+              subtitle: "Ubah tema tampilan",
+              value: _darkMode,
+              onChanged: (val) => setState(() => _darkMode = val),
+            ),
 
-          const SizedBox(height: 8),
-          _buildSectionLabel("Lainnya"),
-          _buildMenuCard(
-            Icons.help_outline_rounded,
-            "Bantuan & FAQ",
-            subtitle: "Pusat bantuan pengguna",
-          ),
-          _buildMenuCard(
-            Icons.info_outline_rounded,
-            "Tentang Aplikasi",
-            subtitle: "Versi 1.0.0",
-          ),
-          _buildMenuCard(
-            Icons.logout_rounded,
-            "Logout",
-            subtitle: "Keluar dari akun",
-            isDestructive: true,
-          ),
-
-          const SizedBox(height: 36),
-        ],
+            const SizedBox(height: 8),
+            _buildSectionHeader("Lainnya"),
+            _buildMenuCard(
+              Icons.help_outline_rounded,
+              "Bantuan & FAQ",
+              subtitle: "Pusat bantuan pengguna",
+            ),
+            _buildMenuCard(
+              Icons.info_outline_rounded,
+              "Tentang Aplikasi",
+              subtitle: "Versi 1.0.0",
+            ),
+            _buildMenuCard(
+              Icons.logout_rounded,
+              "Logout",
+              subtitle: "Keluar dari akun",
+              isDestructive: true,
+              onTap: () => _handleLogout(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -320,31 +329,175 @@ class _ProfilePageState extends State<ProfilePage>
 
   Widget _buildSectionHeader(String label) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 20, bottom: 8),
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
-          color: Colors.white70,
+          color: Colors.black54,
           letterSpacing: 1.6,
-          shadows: [Shadow(color: Colors.black45, blurRadius: 4)],
         ),
       ),
     );
   }
 
-  Widget _buildMenuCard(
-    IconData icon,
-    String title, {
-    String? subtitle,
-    bool isDestructive = false,
-  }) {
-    final color = isDestructive ? Colors.red.shade400 : Colors.deepOrange;
+  // ── Riwayat Booking ──
+  void _showBookingHistory() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final bookings = await ApiService.getBookings();
+    if (mounted) Navigator.pop(context); // tutup loading
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text("Riwayat Tiket",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1A1A1A))),
+            const SizedBox(height: 16),
+            Expanded(
+              child: bookings.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.receipt_long_outlined,
+                              size: 64, color: Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text("Belum ada riwayat tiket",
+                              style: TextStyle(
+                                  color: Colors.grey.shade500, fontSize: 14)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: bookings.length,
+                      itemBuilder: (_, i) {
+                        final b = bookings[i];
+                        final status = b['status'] ?? 'PENDING';
+                        final total = b['total_price'] ?? 0;
+                        final code = b['ticket_code'] ?? '-';
+                        final date = b['createdAt'] ?? '';
+
+                        Color statusColor;
+                        switch (status) {
+                          case 'PAID':
+                            statusColor = Colors.green;
+                            break;
+                          case 'CANCELLED':
+                          case 'EXPIRED':
+                            statusColor = Colors.red;
+                            break;
+                          default:
+                            statusColor = Colors.orange;
+                        }
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border:
+                                Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(code,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                          letterSpacing: 1)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          statusColor.withOpacity(0.1),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: Text(status,
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: statusColor)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                  "Total: Rp ${_formatRp(total)}",
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700)),
+                              if (date.isNotEmpty)
+                                Text(
+                                    "Tanggal: ${date.substring(0, 10)}",
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatRp(dynamic amount) {
+    final str = amount.toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(str[i]);
+    }
+    return buffer.toString();
+  }
+
+  Widget _glassCard({required Widget child, bool isActive = false}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isActive ? Colors.white : Colors.white.withOpacity(0.8),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -354,24 +507,47 @@ class _ProfilePageState extends State<ProfilePage>
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: isActive
-                ? Colors.white.withOpacity(0.22)
-                : Colors.white.withOpacity(0.13),
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: isActive
-                  ? teal400.withOpacity(0.6)
-                  : Colors.white.withOpacity(0.22),
-              width: isActive ? 1.5 : 1,
+      child: child,
+    );
+  }
+
+  Widget _buildMenuCard(
+    IconData icon,
+    String title, {
+    String? subtitle,
+    bool isDestructive = false,
+    VoidCallback? onTap,
+  }) {
+    final color = isDestructive ? Colors.red.shade400 : teal500;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
+          ],
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color),
           ),
-          child: child,
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+          subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
+          trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black26),
         ),
       ),
     );

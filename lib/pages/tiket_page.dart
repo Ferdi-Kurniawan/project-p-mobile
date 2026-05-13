@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
+import 'package:flutter_application_2/services/api_service.dart';
 
 class TiketPage extends StatefulWidget {
   const TiketPage({super.key});
@@ -15,38 +16,8 @@ class _TiketPageState extends State<TiketPage>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  final List<Map<String, String>> _villages = [
-    {
-      'name': 'Lembah Hijau',
-      'loc': 'Bandar Lampung',
-      'img': 'assets/images/lembahhijau.jpeg',
-      'harga': 'Rp 25.000',
-      'hargaNum': '25000',
-      'kategori': 'Hiburan',
-      'deskripsi': 'Taman wisata satwa dengan fasilitas waterboom.',
-      'icon': '🌳',
-    },
-    {
-      'name': 'Kebun Liwa',
-      'loc': 'Lampung Barat',
-      'img': 'assets/images/kebunliwa.jpeg',
-      'harga': 'Rp 20.000',
-      'hargaNum': '20000',
-      'kategori': 'Alam',
-      'deskripsi': 'Wisata kebun dengan udara sejuk pegunungan.',
-      'icon': '🌿',
-    },
-    {
-      'name': 'Pantai Pahawang',
-      'loc': 'Pesawaran',
-      'img': 'assets/images/pahawang1.jpg',
-      'harga': 'Rp 30.000',
-      'hargaNum': '30000',
-      'kategori': 'Pantai',
-      'deskripsi': 'Surga snorkeling dengan keindahan bawah laut.',
-      'icon': '🏖️',
-    },
-  ];
+  List<Map<String, String>> _villages = [];
+  bool _isLoadingProducts = true;
 
   @override
   void initState() {
@@ -63,6 +34,64 @@ class _TiketPageState extends State<TiketPage>
     ).animate(
         CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
+
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() => _isLoadingProducts = true);
+    final products = await ApiService.getProducts();
+    
+    if (products.isNotEmpty) {
+      final List<Map<String, String>> loaded = [];
+      for (var p in products) {
+        final categoryName = p['category'] != null ? p['category']['name'] : 'Umum';
+        loaded.add({
+          'productId': p['id'].toString(),
+          'name': p['name'].toString(),
+          'loc': 'Wisata Lampung', // default loc
+          'img': 'assets/images/lembahhijau.jpeg', // placeholder image
+          'harga': _formatRupiah(p['price'] ?? 0),
+          'hargaNum': (p['price'] ?? 0).toString(),
+          'kategori': categoryName.toString(),
+          'deskripsi': 'Tiket masuk wisata.',
+          'icon': '🎟️',
+        });
+      }
+      setState(() {
+        _villages = loaded;
+        _isLoadingProducts = false;
+      });
+    } else {
+      // Fallback data statis jika API gagal/kosong
+      setState(() {
+        _villages = [
+          {
+            'productId': 'static-1',
+            'name': 'Lembah Hijau',
+            'loc': 'Bandar Lampung',
+            'img': 'assets/images/lembahhijau.jpeg',
+            'harga': 'Rp 25.000',
+            'hargaNum': '25000',
+            'kategori': 'Hiburan',
+            'deskripsi': 'Taman wisata satwa dengan fasilitas waterboom.',
+            'icon': '🌳',
+          },
+          {
+            'productId': 'static-2',
+            'name': 'Kebun Liwa',
+            'loc': 'Lampung Barat',
+            'img': 'assets/images/kebunliwa.jpeg',
+            'harga': 'Rp 20.000',
+            'hargaNum': '20000',
+            'kategori': 'Alam',
+            'deskripsi': 'Wisata kebun dengan udara sejuk pegunungan.',
+            'icon': '🌿',
+          },
+        ];
+        _isLoadingProducts = false;
+      });
+    }
   }
 
   @override
@@ -186,53 +215,59 @@ class _TiketPageState extends State<TiketPage>
                             topRight: Radius.circular(30),
                           ),
                         ),
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 32, height: 32,
-                                    decoration: BoxDecoration(
-                                      color: Colors.deepOrange.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
+                        child: _isLoadingProducts
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.deepOrange,
+                                ),
+                              )
+                            : SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 32, height: 32,
+                                          decoration: BoxDecoration(
+                                            color: Colors.deepOrange.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(Icons.explore_outlined,
+                                              size: 16, color: Colors.deepOrange),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        const Text(
+                                          "Destinasi Tersedia",
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF1A1A1A),
+                                            letterSpacing: -0.2,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.deepOrange,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            '${_villages.length}',
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    child: const Icon(Icons.explore_outlined,
-                                        size: 16, color: Colors.deepOrange),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Text(
-                                    "Destinasi Tersedia",
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF1A1A1A),
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.deepOrange,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      '${_villages.length}',
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              ..._villages.asMap().entries.map((entry) {
+                                    const SizedBox(height: 16),
+                                    ..._villages.asMap().entries.map((entry) {
                                 final i = entry.key;
                                 final wisata = entry.value;
                                 return TweenAnimationBuilder<double>(
@@ -432,20 +467,8 @@ class _TiketPageState extends State<TiketPage>
           ),
         ],
       ),
-      child: const Center(
-        child: Text(
-          "PESAN TIKET SEKARANG",
-          style: TextStyle(
-            color: Colors.white, 
-            fontWeight: FontWeight.w900, 
-            letterSpacing: 1.5, 
-            fontSize: 13
-          ),
-        ),
-      ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _infoChip(IconData icon, String label) {
     return Container(
@@ -497,18 +520,32 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       int.tryParse(widget.wisata['hargaNum'] ?? '0') ?? 0;
   int get _totalHarga => _hargaBase * _jumlah;
 
-  void _submit() {
+  void _submit() async {
     HapticFeedback.mediumImpact();
 
     final namaWisata = widget.wisata['name'] ?? '';
+    final productId = widget.wisata['productId'] ?? '';
 
-    CartModel.instance.addItem({
-      'name': namaWisata,
-      'loc': widget.wisata['loc'] ?? '',
-      'img': widget.wisata['img'] ?? '',
-      'harga': _totalHarga.toString(),
-      'kategori': widget.wisata['kategori'] ?? '',
-    });
+    if (productId.isNotEmpty) {
+      // Gunakan API backend (Redis cart)
+      await CartModel.instance.addItem({
+        'productId': productId,
+        'name': namaWisata,
+        'loc': widget.wisata['loc'] ?? '',
+        'img': widget.wisata['img'] ?? '',
+        'hargaNum': widget.wisata['hargaNum'] ?? '0',
+        'kategori': widget.wisata['kategori'] ?? '',
+      }, _jumlah);
+    } else {
+      // Fallback lokal jika belum ada productId
+      CartModel.instance.addItemWithQuantity({
+        'name': namaWisata,
+        'loc': widget.wisata['loc'] ?? '',
+        'img': widget.wisata['img'] ?? '',
+        'harga': _totalHarga.toString(),
+        'kategori': widget.wisata['kategori'] ?? '',
+      }, _jumlah);
+    }
 
     Navigator.pop(context);
 
