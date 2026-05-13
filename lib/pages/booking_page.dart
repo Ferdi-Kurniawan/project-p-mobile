@@ -1,11 +1,30 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
 import 'package:flutter_application_2/services/api_service.dart';
 
+// ════════════════════════════════════════════════════════
+//  DESIGN TOKENS — Premium Teal Theme
+// ════════════════════════════════════════════════════════
+class _T {
+  static const Color primary        = Color(0xFF00B09B);
+  static const Color primaryDark    = Color(0xFF007A6A);
+  static const Color primaryLight   = Color(0xFF4DD9C9);
+  static const Color primarySurface = Color(0xFFE0F7F4);
+  static const List<Color> headerGrad = [Color(0xFF00B09B), Color(0xFF00D2B4)];
+  static const Color accent         = Color(0xFFFF6B35);
+  static const Color bgPage         = Color(0xFFF4F9F8); // Sedikit lebih bersih dari sebelumnya
+  static const Color bgCard         = Color(0xFFFFFFFF);
+  static const Color textHead       = Color(0xFF0D2B26);
+  static const Color textBody       = Color(0xFF4A6B66);
+  static const Color textMuted      = Color(0xFFA0B8B5);
+  static const Color divider        = Color(0xFFDCF0EE);
+  static const Color green          = Color(0xFF00C48C);
+}
+
 class BookingPage extends StatefulWidget {
+  final String bookingId;
   final List<CartItem> items;
   final DateTime tanggalMulai;
   final DateTime tanggalSelesai;
@@ -13,45 +32,86 @@ class BookingPage extends StatefulWidget {
 
   BookingPage({
     super.key,
+    this.bookingId = '',
     this.items = const [],
     DateTime? tanggalMulai,
     DateTime? tanggalSelesai,
     this.totalHarga = 0,
-  }) : tanggalMulai = tanggalMulai ?? DateTime.now(),
-       tanggalSelesai = tanggalSelesai ?? DateTime.now();
+  })  : tanggalMulai = tanggalMulai ?? DateTime.now(),
+        tanggalSelesai = tanggalSelesai ?? DateTime.now();
 
   @override
   State<BookingPage> createState() => _BookingPageState();
 }
 
-class _BookingPageState extends State<BookingPage> {
-  String? _selectedMetode;
-  String? _selectedBank;
+class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin {
+  late AnimationController _fadeCtrl;
+  late AnimationController _pulseCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _pulseAnim;
+
   bool _isLoading = false;
-  
-  // State untuk mengontrol UI: Apakah booking sudah terbuat di backend?
   bool _isBookingCreated = false;
+  Future<List<dynamic>>? _futureBookings;
+
   String? _bookingIdFromBackend;
   String? _ticketCodeFromBackend;
+  String? _proofUrlFromBackend;
   File? _imageProof;
+  int _activeTotalFromHistory = 0;
+  String? _currentStatus;
 
-  static const Map<String, int> _adminFee = {
-    'Transfer Bank': 4500,
-    'QRIS': 0,
-    'GoPay': 1000,
-    'OVO': 1000,
-    'Dana': 1000,
-    'ShopeePay': 1000,
-  };
+  @override
+  void initState() {
+    super.initState();
+    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
 
-  static const List<Map<String, String>> _banks = [
-    {'name': 'BCA',     'norek': '1234567890'},
-    {'name': 'Mandiri', 'norek': '0987654321'},
-    {'name': 'BNI',     'norek': '1122334455'},
-    {'name': 'BRI',     'norek': '5566778899'},
-  ];
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _pulseAnim = Tween<double>(begin: 0.96, end: 1.04).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    
+    _fadeCtrl.forward();
+    if (widget.items.isEmpty) _fetchHistory();
+  }
 
-  // ── helpers ──
+  @override
+  void dispose() {
+    _fadeCtrl.dispose();
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  // --- LOGIKA DATA (Tetap Mempertahankan Logika Asli) ---
+  void _fetchHistory() {
+    setState(() {
+      _futureBookings = ApiService.getBookings();
+    });
+  }
+
+  Future<void> _loadPaymentProof(String bId) async {
+    final res = await ApiService.getPaymentProof(bId);
+    if (res != null && res['status'] == "success") {
+      final data = res['data'];
+      if (data != null && data['payment_proof_url'] != null) {
+        setState(() {
+          _proofUrlFromBackend = data['payment_proof_url'];
+        });
+      }
+    }
+  }
+
+  // --- HELPER FORMAT TANGGAL ---
+  String _formatTanggal(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty || dateStr == '-') return '-';
+    try {
+      DateTime dt = DateTime.parse(dateStr);
+      const bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      return '${dt.day} ${bulan[dt.month - 1]} ${dt.year}';
+    } catch (e) {
+      return dateStr; 
+    }
+  }
+  
   String _formatRupiah(int amount) {
     final str = amount.toString();
     final buffer = StringBuffer();
@@ -62,430 +122,765 @@ class _BookingPageState extends State<BookingPage> {
     return 'Rp ${buffer.toString()}';
   }
 
-  String _formatTanggal(DateTime dt) {
-    const hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    const bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-    return '${hari[dt.weekday - 1]}, ${dt.day} ${bulan[dt.month - 1]} ${dt.year}';
-  }
-
-  // Format aman YYYY-MM-DD untuk Backend
-  String _formatDateForApi(DateTime dt) {
-    return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
-  }
-
-  int get _durasi => widget.tanggalSelesai.difference(widget.tanggalMulai).inDays + 1;
-  int get _adminFeeAmount => _adminFee[_selectedMetode] ?? 0;
-  int get _totalBayar => widget.totalHarga + _adminFeeAmount;
-
-  // ═════════════════════════════════════════════════════════
-  //  LOGIK KONEKSI API (CREATE BOOKING & UPLOAD PROOF)
-  // ═════════════════════════════════════════════════════════
-
-  // 1. Fungsi DRAFT / CREATE BOOKING
-  void _handleCreateBooking() async {
+  Future<void> _handleCreateBooking() async {
     setState(() => _isLoading = true);
-
-    // Menggunakan format YYYY-MM-DD agar tidak ditolak backend
     final result = await ApiService.createBooking(
-      startDate: _formatDateForApi(widget.tanggalMulai),
-      endDate: _formatDateForApi(widget.tanggalSelesai),
+      startDate: "${widget.tanggalMulai.year}-${widget.tanggalMulai.month}-${widget.tanggalMulai.day}",
+      endDate: "${widget.tanggalSelesai.year}-${widget.tanggalSelesai.month}-${widget.tanggalSelesai.day}",
     );
-
     setState(() => _isLoading = false);
-
     if (result != null) {
       setState(() {
-        // Ambil ID dari backend (cek 'id' atau '_id' tergantung database SQL/MongoDB)
-        _bookingIdFromBackend = result['id'] ?? result['_id'];
-        _ticketCodeFromBackend = result['ticket_code'] ?? "WS${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}";
-        _isBookingCreated = true; // Mengubah tampilan UI ke mode Upload Pembayaran
+        var data = result['data'] ?? result;
+        var bookingData = data['booking'] ?? data['bookings'] ?? data;
+        _bookingIdFromBackend = (bookingData['id'] ?? bookingData['_id'])?.toString();
+        _ticketCodeFromBackend = (bookingData['ticket_code'] ?? bookingData['ticketCode'])?.toString();
+        _isBookingCreated = true;
       });
-
-      // Cart di server (Redis) otomatis terhapus saat sukses jadi booking, bersihkan lokal:
-      CartModel.instance.clear(); 
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Gagal membuat pesanan. Pastikan sesi login aktif.'),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      CartModel.instance.clear();
     }
   }
 
-  // 2. Fungsi PILIH GAMBAR & UPLOAD BUKTI BAYAR
   Future<void> _pickAndUploadImage() async {
+    if (_bookingIdFromBackend == null) await _handleCreateBooking();
     if (_bookingIdFromBackend == null) return;
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
     if (pickedFile != null) {
       setState(() {
         _imageProof = File(pickedFile.path);
         _isLoading = true;
       });
-
-      final metodeDipilih = _selectedBank ?? _selectedMetode ?? 'Transfer';
-      
-      // Panggil fungsi upload dari ApiService
-      final response = await ApiService.uploadPaymentProof(
+      final res = await ApiService.uploadPaymentProof(
         bookingId: _bookingIdFromBackend!,
-        paymentMethod: metodeDipilih,
+        paymentMethod: 'Transfer Bank',
         imageFile: _imageProof!,
       );
-
       setState(() => _isLoading = false);
-
-      if (response != null) {
-        _showSuksesSheet();
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Gagal mengupload bukti pembayaran. Coba lagi.'),
-              backgroundColor: Colors.red.shade700,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      }
+      if (res != null) _showSuksesSheet();
     }
   }
 
-  // ═════════════════════════════════════════════════════════
-  //  BOTTOM SHEET METODE PEMBAYARAN
-  // ═════════════════════════════════════════════════════════
-  void _showMetodePembayaran() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).viewInsets.bottom + 32),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-                  const SizedBox(height: 20),
-                  const Text('Pilih Metode Pembayaran', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 24),
-
-                  // Transfer Bank List
-                  _metodeGroup(
-                    setSheetState: setSheetState,
-                    label: 'Transfer Bank',
-                    icon: Icons.account_balance_rounded,
-                    child: _selectedMetode == 'Transfer Bank'
-                        ? Column(
-                            children: _banks.map((bank) {
-                              final isSelected = _selectedBank == bank['name'];
-                              return ListTile(
-                                onTap: () {
-                                  setSheetState(() => _selectedBank = bank['name']);
-                                  setState(() => _selectedBank = bank['name']);
-                                },
-                                title: Text('Bank ${bank['name']}', style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.deepOrange : Colors.black)),
-                                subtitle: Text('No. Rek: ${bank['norek']}'),
-                                trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.deepOrange) : null,
-                              );
-                            }).toList(),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(height: 10),
-
-                  // QRIS Option
-                  _metodeGroup(
-                    setSheetState: setSheetState,
-                    label: 'QRIS',
-                    icon: Icons.qr_code_scanner_rounded,
-                    badge: 'Gratis',
-                  ),
-                  const SizedBox(height: 10),
-
-                  // E-Wallet Option
-                  _metodeGroup(
-                    setSheetState: setSheetState,
-                    label: 'E-Wallet',
-                    icon: Icons.account_balance_wallet_rounded,
-                    child: _selectedMetode == 'E-Wallet'
-                        ? Column(
-                            children: ['GoPay', 'OVO', 'Dana', 'ShopeePay'].map((w) {
-                              final isSelected = _selectedBank == w;
-                              return ListTile(
-                                onTap: () {
-                                  setSheetState(() => _selectedBank = w);
-                                  setState(() => _selectedBank = w);
-                                },
-                                title: Text(w, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.deepOrange : Colors.black)),
-                                trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.deepOrange) : null,
-                              );
-                            }).toList(),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_selectedMetode == null || (_selectedMetode == 'Transfer Bank' && _selectedBank == null) || (_selectedMetode == 'E-Wallet' && _selectedBank == null)) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih detail metode pembayaran terlebih dahulu')));
-                          return;
-                        }
-                        Navigator.pop(context);
-                        // Jalankan proses DRAFT Booking ke backend
-                        _handleCreateBooking();
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                      child: const Text('Lanjutkan Pemesanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ═════════════════════════════════════════════════════════
-  //  TAMPILAN UTAMA (BUILDER)
-  // ═════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════
+  //  ARSITEKTUR UI UTAMA
+  // ════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      appBar: AppBar(
-        backgroundColor: Colors.deepOrange.shade800,
-        elevation: 0,
-        title: const Text("Detail & Pembayaran", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: _T.bgPage,
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.deepOrange))
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                // Jika pesanan belum dibuat -> Tampilkan ringkasan pesanan
-                if (!_isBookingCreated) ...[
-                  _sectionTitle('Info Kunjungan', Icons.calendar_month_rounded),
-                  const SizedBox(height: 10),
-                  _buildCardContainer([
-                    Text("Mulai: ${_formatTanggal(widget.tanggalMulai)}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text("Selesai: ${_formatTanggal(widget.tanggalSelesai)}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const Divider(),
-                    Text("Durasi: $_durasi Hari Kunjungan", style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w700)),
-                  ]),
-                  const SizedBox(height: 20),
-                  
-                  _sectionTitle('Ringkasan Item', Icons.receipt_long_rounded),
-                  const SizedBox(height: 10),
-                  _buildCardContainer(
-                    widget.items.map((e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(child: Text("${e.name} (${e.quantity}x)")),
-                          Text(_formatRupiah(e.subtotal), style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    )).toList(),
-                  ),
-                ] 
-                // Jika pesanan SUDAH DIBUAT -> Tampilkan halaman instruksi bayar & Upload
-                else ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.orange.shade200)),
-                    child: Column(
-                      children: [
-                        const Text("Pesanan Berhasil Dibuat!", style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w800, fontSize: 16)),
-                        const SizedBox(height: 4),
-                        Text("Kode Booking: ${_ticketCodeFromBackend ?? '-'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  _sectionTitle('Instruksi Pembayaran', Icons.payment_rounded),
-                  const SizedBox(height: 10),
-                  _buildCardContainer([
-                    Text("Metode: ${_selectedBank ?? _selectedMetode}", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    if (_selectedMetode == 'Transfer Bank') ...[
-                      const Text("Silakan lakukan transfer ke rekening berikut:"),
-                      const SizedBox(height: 4),
-                      Text(_banks.firstWhere((b) => b['name'] == _selectedBank, orElse: () => {'norek': '1234567890'})['norek']!, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.deepOrange, letterSpacing: 2)),
-                    ] else if (_selectedMetode == 'QRIS') ...[
-                      const Center(child: Icon(Icons.qr_code_2_rounded, size: 120)),
-                      const Center(child: Text("Scan QRIS di atas menggunakan M-Banking / E-Wallet Anda")),
-                    ] else ...[
-                      Text("Buka aplikasi $_selectedBank Anda dan lakukan pembayaran ke merchant Wisata."),
-                    ],
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Total Tagihan:", style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text(_formatRupiah(_totalBayar), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.deepOrange)),
-                      ],
-                    ),
-                  ]),
-                  const SizedBox(height: 24),
-
-                  // Area Upload Bukti
-                  _sectionTitle('Konfirmasi Pembayaran', Icons.cloud_upload_rounded),
-                  const SizedBox(height: 10),
-                  InkWell(
-                    onTap: _pickAndUploadImage,
-                    child: Container(
-                      width: double.infinity,
-                      height: 140,
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid)),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.cloud_upload_outlined, size: 48, color: _imageProof != null ? Colors.green : Colors.deepOrange),
-                          const SizedBox(height: 8),
-                          Text(_imageProof != null ? "Bukti Terpilih (Ketuk untuk ganti)" : "Upload Bukti Pembayaran disini", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
-                          if (_imageProof != null)
-                            Padding(padding: const EdgeInsets.only(top: 4), child: Text(_imageProof!.path.split('/').last, style: const TextStyle(fontSize: 11, color: Colors.green))),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+          ? _buildLoadingOverlay()
+          : FadeTransition(
+              opacity: _fadeAnim,
+              child: (widget.items.isEmpty && !_isBookingCreated) ? _buildHistoryView() : _buildDetailView(),
             ),
-
-      // Bottom Navigation Bar
-      bottomNavigationBar: _isLoading || _isBookingCreated
-          ? null // Sembunyikan jika sedang loading atau sudah masuk mode upload
-          : Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Total Pembayaran', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(_formatRupiah(_totalBayar), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.deepOrange)),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: _showMetodePembayaran,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                    child: const Text('Pilih Pembayaran', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                  ),
-                ],
-              ),
-            ),
+      bottomNavigationBar: _buildBottomBar(),
     );
   }
 
-  // ── Sub-Widget & Komponen UI ──
-  Widget _sectionTitle(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.deepOrange),
-        const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
+  // --- OVERLAY LOADING ---
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: _T.bgPage,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleTransition(
+              scale: _pulseAnim,
+              child: Container(
+                width: 88, height: 88,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(colors: _T.headerGrad),
+                  boxShadow: [
+                    BoxShadow(color: _T.primary.withOpacity(0.30), blurRadius: 30, offset: const Offset(0, 10))
+                  ],
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 40, height: 40,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Memproses Transaksi...", 
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _T.textHead, letterSpacing: 0.3)
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              "Mohon tunggu sebentar", 
+              style: TextStyle(fontSize: 12, color: _T.textBody)
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════
+  //  TAMPILAN A: DAFTAR RIWAYAT (HISTORY VIEW)
+  // ════════════════════════════════════════════════════════
+  Widget _buildHistoryView() {
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        _buildSliverHeader(
+          icon: Icons.confirmation_number_outlined, 
+          title: "Tiket Saya", 
+          subtitle: "Kelola riwayat pemesanan & akses cepat tiket Anda"
+        ),
+        SliverToBoxAdapter(
+          child: FutureBuilder<List<dynamic>>(
+            future: _futureBookings,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.only(top: 100), 
+                  child: Center(child: CircularProgressIndicator(color: _T.primary))
+                );
+              }
+              final bookings = snapshot.data ?? [];
+              if (bookings.isEmpty) return _buildEmptyState();
+
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+                child: Column(
+                  children: bookings.map((b) => _buildPremiumHistoryCard(b)).toList(),
+                ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildCardContainer(List<Widget> children) {
+  // --- KARTU RIWAYAT ALA TIKET FISIK ---
+  Widget _buildPremiumHistoryCard(Map<String, dynamic> b) {
+    final status = b['status']?.toString().toLowerCase() ?? 'pending';
+    final isPaid = status.contains('paid') || status.contains('success');
+    final String ticketCode = b['ticket_code'] ?? "TICKET-${b['id'] ?? 'NEW'}";
+    final String date = _formatTanggal(b['start_date']?.toString());
+    final int price = b['total_price'] ?? 0;
+
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3))]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: _T.bgCard,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _T.divider.withOpacity(0.6), width: 1.2),
+        boxShadow: [
+          BoxShadow(color: _T.textHead.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () {
+            setState(() {
+              _isBookingCreated = true;
+              _bookingIdFromBackend = (b['id'] ?? b['_id'])?.toString();
+              _ticketCodeFromBackend = ticketCode;
+              _currentStatus = status;
+              _activeTotalFromHistory = price;
+            });
+            if (isPaid) _loadPaymentProof(_bookingIdFromBackend!);
+          },
+          child: Column(
+            children: [
+              // Bagian Atas Tiket
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isPaid ? _T.green.withOpacity(0.12) : _T.accent.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPaid ? Icons.check_circle_rounded : Icons.schedule_rounded, 
+                                color: isPaid ? _T.green : _T.accent, 
+                                size: 14
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isPaid ? "TERVERIFIKASI" : "MENUNGGU BAYAR",
+                                style: TextStyle(
+                                  fontSize: 10, 
+                                  fontWeight: FontWeight.w800, 
+                                  color: isPaid ? _T.primaryDark : _T.accent,
+                                  letterSpacing: 0.5
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded, color: _T.textMuted.withOpacity(0.5), size: 14),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      ticketCode,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _T.textHead, letterSpacing: 1.0),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.event_available_rounded, size: 14, color: _T.primary),
+                        const SizedBox(width: 6),
+                        Text("Kunjungan: $date", style: const TextStyle(fontSize: 13, color: _T.textBody, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Garis Pemisah Tiket (Dashed Line + Inner Notches)
+              Stack(
+                children: [
+                  SizedBox(
+                    height: 24,
+                    child: Center(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final dashCount = (constraints.constrainWidth() / 10).floor();
+                          return Flex(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            direction: Axis.horizontal,
+                            children: List.generate(dashCount, (_) {
+                              return SizedBox(
+                                width: 5, height: 1.5,
+                                child: DecoratedBox(decoration: BoxDecoration(color: _T.divider)),
+                              );
+                            }),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: -12, top: 0, bottom: 0,
+                    child: Container(
+                      width: 24, height: 24,
+                      decoration: const BoxDecoration(color: _T.bgPage, shape: BoxShape.circle),
+                    ),
+                  ),
+                  Positioned(
+                    right: -12, top: 0, bottom: 0,
+                    child: Container(
+                      width: 24, height: 24,
+                      decoration: const BoxDecoration(color: _T.bgPage, shape: BoxShape.circle),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Bagian Bawah Tiket (Harga & Call to Action)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Total Pembayaran", style: TextStyle(fontSize: 11, color: _T.textMuted)),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formatRupiah(price),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _T.primary),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isPaid ? "Lihat E-Tiket" : "Bayar Sekarang",
+                      style: TextStyle(
+                        fontSize: 13, 
+                        fontWeight: FontWeight.w800, 
+                        color: isPaid ? _T.primary : _T.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _metodeGroup({required StateSetter setSheetState, required String label, required IconData icon, String? badge, Widget? child}) {
-    final isSelected = _selectedMetode == label || (label == 'E-Wallet' && ['GoPay', 'OVO', 'Dana', 'ShopeePay'].contains(_selectedMetode));
-    return InkWell(
-      onTap: () {
-        setSheetState(() {
-          _selectedMetode = isSelected ? null : label;
-          _selectedBank = null;
-        });
-        setState(() {});
-      },
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: isSelected ? Colors.deepOrange : Colors.grey.shade200)),
-        child: Column(
-          children: [
-            Row(
+  // ════════════════════════════════════════════════════════
+  //  TAMPILAN B: DETAIL PESANAN & PEMBAYARAN (DETAIL VIEW)
+  // ════════════════════════════════════════════════════════
+  Widget _buildDetailView() {
+    final bool isPaid = _currentStatus?.contains('paid') == true || _currentStatus?.contains('success') == true;
+    final int total = (_isBookingCreated && widget.items.isEmpty) ? _activeTotalFromHistory : widget.totalHarga;
+    final String title = isPaid ? "E-Tiket Resmi" : "Selesaikan Pembayaran";
+
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        _buildSliverHeader(
+          icon: isPaid ? Icons.verified_user_rounded : Icons.account_balance_wallet_rounded, 
+          title: title, 
+          subtitle: _ticketCodeFromBackend != null ? "Booking Ref: $_ticketCodeFromBackend" : "Verifikasi instruksi di bawah ini",
+          onBack: () {
+            if (_isBookingCreated && widget.items.isEmpty) {
+              setState(() => _isBookingCreated = false);
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, color: isSelected ? Colors.deepOrange : Colors.grey),
-                const SizedBox(width: 12),
-                Expanded(child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? Colors.deepOrange : Colors.black))),
-                if (badge != null) Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(6)), child: Text(badge, style: const TextStyle(color: Colors.green, fontSize: 10))),
-                Icon(isSelected ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Colors.grey),
+                _buildModernStatusBanner(isPaid),
+                const SizedBox(height: 24),
+
+                if (widget.items.isNotEmpty) ...[
+                  _buildSectionHeader("Item Dipesan", Icons.shopping_bag_rounded),
+                  const SizedBox(height: 12),
+                  ...widget.items.map((item) => _buildModernItemRow(item)),
+                  const SizedBox(height: 24),
+                ],
+
+                _buildSectionHeader("Rincian Pembayaran", Icons.receipt_long_rounded),
+                const SizedBox(height: 12),
+                _buildPremiumTotalCard(total),
+                const SizedBox(height: 24),
+
+                _buildSectionHeader("Transfer Bank Resmi", Icons.business_rounded),
+                const SizedBox(height: 12),
+                _buildPremiumBankCard(),
+                const SizedBox(height: 24),
+
+                _buildSectionHeader("Dokumentasi Bukti", Icons.cloud_done_rounded),
+                const SizedBox(height: 12),
+                _buildModernProofSection(isPaid),
               ],
             ),
-            if (isSelected && child != null) ...[const Divider(), child],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- KOMPONEN: BANNER STATUS PREMIUM ---
+  Widget _buildModernStatusBanner(bool isPaid) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isPaid ? [_T.primary, _T.primaryLight] : [const Color(0xFFFF7A45), const Color(0xFFFF9C73)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: (isPaid ? _T.primary : _T.accent).withOpacity(0.25), 
+            blurRadius: 20, 
+            offset: const Offset(0, 8)
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+            child: Icon(isPaid ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPaid ? "Pembayaran Tuntas" : "Menunggu Transfer",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isPaid ? "Tiket Anda sudah siap digunakan" : "Segera upload bukti pembayaran",
+                  style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- KOMPONEN: BARIS ITEM MODERN ---
+  Widget _buildModernItemRow(CartItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _T.bgCard, 
+        borderRadius: BorderRadius.circular(16), 
+        border: Border.all(color: _T.divider.withOpacity(0.5))
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: _T.primarySurface, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.local_activity_rounded, color: _T.primary, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800, color: _T.textHead, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text("${item.quantity}x tiket pengunjung", style: const TextStyle(fontSize: 12, color: _T.textBody)),
+              ],
+            ),
+          ),
+          Text(
+            _formatRupiah((int.tryParse(item.harga.toString()) ?? 0) * item.quantity),
+            style: const TextStyle(fontWeight: FontWeight.w800, color: _T.primaryDark, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- KOMPONEN: KARTU TOTAL TAGIHAN ---
+  Widget _buildPremiumTotalCard(int total) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _T.primarySurface.withOpacity(0.5), 
+        borderRadius: BorderRadius.circular(20), 
+        border: Border.all(color: _T.primary.withOpacity(0.15))
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Total Tagihan", style: TextStyle(fontSize: 12, color: _T.textBody, fontWeight: FontWeight.w600)),
+              SizedBox(height: 2),
+              Text("Termasuk pajak", style: TextStyle(fontSize: 10, color: _T.textMuted)),
+            ],
+          ),
+          Text(
+            _formatRupiah(total), 
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _T.primaryDark)
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- KOMPONEN: KARTU REKENING BANK ---
+  Widget _buildPremiumBankCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _T.bgCard, 
+        borderRadius: BorderRadius.circular(20), 
+        border: Border.all(color: _T.divider),
+        boxShadow: [BoxShadow(color: _T.textHead.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 5))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: _T.bgPage, borderRadius: BorderRadius.circular(14)),
+            child: const Icon(Icons.account_balance_rounded, color: _T.primary, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Bank Central Asia (BCA)", style: TextStyle(fontSize: 12, color: _T.textBody)),
+                const SizedBox(height: 4),
+                const Text(
+                  "1234 5678 90", 
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _T.textHead, letterSpacing: 2.0)
+                ),
+                const SizedBox(height: 4),
+                Text("a.n. Wisata Indonesia", style: TextStyle(fontSize: 11, color: _T.textMuted.withOpacity(0.8), fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () { /* Opsi salin jika ada */ },
+            icon: const Icon(Icons.copy_rounded, color: _T.primary, size: 20),
+            tooltip: "Salin Rekening",
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- KOMPONEN: AREA UPLOAD & PREVIEW BUKTI ---
+  Widget _buildModernProofSection(bool isPaid) {
+    return Column(
+      children: [
+        Container(
+          height: 240, width: double.infinity,
+          decoration: BoxDecoration(
+            color: _T.bgCard, 
+            borderRadius: BorderRadius.circular(20), 
+            border: Border.all(color: _T.divider),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(19),
+            child: _proofUrlFromBackend != null
+                ? Image.network(
+                    _proofUrlFromBackend!, 
+                    fit: BoxFit.cover, 
+                    loadingBuilder: (c, child, progress) => progress == null ? child : const Center(child: CircularProgressIndicator(color: _T.primary)),
+                    errorBuilder: (c, e, s) => _buildProofPlaceholder("Gagal memuat gambar bukti", Icons.broken_image_rounded)
+                  )
+                : (_imageProof != null 
+                    ? Image.file(_imageProof!, fit: BoxFit.cover) 
+                    : _buildProofPlaceholder(isPaid ? "Dokumen Tersimpan" : "Belum ada file diunggah", Icons.image_search_rounded)),
+          ),
+        ),
+        if (!isPaid) const SizedBox(height: 16),
+        if (!isPaid)
+          GestureDetector(
+            onTap: _pickAndUploadImage,
+            child: Container(
+              width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: _T.headerGrad), 
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: _T.primary.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 6))],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Text("Unggah Bukti Transfer", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildProofPlaceholder(String text, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: _T.textMuted.withOpacity(0.5), size: 48),
+          const SizedBox(height: 12),
+          Text(text, style: const TextStyle(color: _T.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  // ════════════════════════════════════════════════════════
+  //  KOMPONEN ARSITEKTURAL GLOBAL
+  // ════════════════════════════════════════════════════════
+  
+  // --- HEADER SLIVER LENGKUNG PREMIUM ---
+  Widget _buildSliverHeader({required IconData icon, required String title, required String subtitle, VoidCallback? onBack}) {
+    return SliverToBoxAdapter(
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(colors: _T.headerGrad, begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: [
+              // Efek dekorasi lingkaran latar belakang abstrak
+              Positioned(top: -40, right: -30, child: Container(width: 140, height: 140, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.08)))),
+              Positioned(top: 30, right: 80, child: Container(width: 60, height: 60, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.05)))),
+              
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (onBack != null) ...[
+                      IconButton(
+                        onPressed: onBack, 
+                        style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.2), padding: const EdgeInsets.all(10)),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18)
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                          child: Icon(icon, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                              const SizedBox(height: 2),
+                              Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- FLOATING BOTTOM NAVIGATION BAR ---
+  Widget? _buildBottomBar() {
+    if (_isBookingCreated || (widget.items.isEmpty && !_isBookingCreated)) return null;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white, 
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
+        boxShadow: [BoxShadow(color: _T.textHead.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Total Tagihan", style: TextStyle(fontSize: 11, color: _T.textMuted, fontWeight: FontWeight.w600)),
+                  Text(_formatRupiah(widget.totalHarga), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _T.primaryDark)),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _handleCreateBooking, 
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _T.primary, 
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 4,
+                shadowColor: _T.primary.withOpacity(0.4),
+              ), 
+              child: const Row(
+                children: [
+                  Text("Buat Pesanan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                  SizedBox(width: 8),
+                  Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                ],
+              )
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  // --- HELPER STRUKTUR ---
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: _T.primary, size: 18),
+        const SizedBox(width: 8),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w800, color: _T.textHead, fontSize: 15)),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return SizedBox(
+      height: 350, 
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: _T.divider.withOpacity(0.4), shape: BoxShape.circle),
+              child: const Icon(Icons.receipt_long_rounded, color: _T.textMuted, size: 48),
+            ),
+            const SizedBox(height: 16),
+            const Text("Belum Ada Transaksi", style: TextStyle(fontWeight: FontWeight.w800, color: _T.textHead, fontSize: 16)),
+            const SizedBox(height: 4),
+            const Text("Tiket pesanan Anda akan muncul di sini", style: TextStyle(color: _T.textBody, fontSize: 13)),
+          ],
+        )
+      )
     );
   }
 
   void _showSuksesSheet() {
     showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 72),
-            const SizedBox(height: 16),
-            const Text('Pembayaran Berhasil!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            const Text('Bukti pembayaran Anda sedang diverifikasi oleh admin.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange, padding: const EdgeInsets.symmetric(vertical: 14)),
-                child: const Text('Kembali ke Beranda', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      context: context, 
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(32), 
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min, 
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: _T.green.withOpacity(0.15), shape: BoxShape.circle),
+                child: Icon(Icons.cloud_done_rounded, color: _T.green, size: 48),
               ),
-            )
-          ],
-        ),
-      ),
+              const SizedBox(height: 20),
+              const Text("Bukti Berhasil Terkirim!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _T.textHead)),
+              const SizedBox(height: 8),
+              const Text("Admin akan melakukan verifikasi pembayaran Anda sesegera mungkin.", textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: _T.textBody)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context), 
+                  style: ElevatedButton.styleFrom(backgroundColor: _T.primary, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                  child: const Text("Selesai & Kembali", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))
+                ),
+              )
+            ]
+          ),
+        )
+      )
     );
   }
 }

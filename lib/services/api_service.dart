@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
+import 'package:http_parser/http_parser.dart'; // Wajib ditambahkan
 
 class ApiService {
   static const String baseUrl = "http://10.0.2.2:3001";
@@ -273,31 +274,31 @@ class ApiService {
     }
   }
 
-  // ── GET CART ──
-  static Future<List<Map<String, dynamic>>> getCart() async {
+// ── GET CART ──
+  static Future<List<dynamic>> getCart() async {
     try {
       final headers = await _authHeaders(json: false);
       final response = await _client.get(
         Uri.parse("$baseUrl/booking/cart"),
         headers: headers,
       );
-
       print("GET CART: ${response.statusCode}");
       print("GET CART BODY: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
+        
+        // Langsung kembalikan array as List<dynamic> tanpa konversi paksa
         if (data is Map && data['cart'] != null) {
-          return List<Map<String, dynamic>>.from(data['cart']);
+          return data['cart'] as List<dynamic>;
         }
 
         if (data is Map && data['data'] != null) {
-          return List<Map<String, dynamic>>.from(data['data']);
+          return data['data'] as List<dynamic>;
         }
 
         if (data is List) {
-          return List<Map<String, dynamic>>.from(data);
+          return data as List<dynamic>;
         }
       }
     } catch (e) {
@@ -451,19 +452,32 @@ class ApiService {
       final uri = Uri.parse("$baseUrl/payment/$bookingId");
       final request = http.MultipartRequest('POST', uri);
 
-      // Header cookie
+      // Header cookie 
       if (cookie.isNotEmpty) {
         request.headers['Cookie'] = cookie;
       }
 
-      // Field teks
+      // Field teks 
       request.fields['payment_method'] = paymentMethod;
 
-      // File gambar bukti bayar
+      // --- LOGIKA PERBAIKAN: Deteksi MIME Type ---
+      final String extension = imageFile.path.split('.').last.toLowerCase();
+      MediaType contentType;
+
+      if (extension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else if (extension == 'webp') {
+        contentType = MediaType('image', 'webp');
+      } else {
+        contentType = MediaType('image', 'jpeg'); // Default untuk jpg/jpeg
+      }
+
+      // File gambar bukti bayar dengan contentType 
       request.files.add(
         await http.MultipartFile.fromPath(
           'payment_proof',
           imageFile.path,
+          contentType: contentType, // Mengirimkan identitas file ke backend
         ),
       );
 

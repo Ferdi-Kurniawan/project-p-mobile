@@ -42,11 +42,12 @@ class CartModel extends ChangeNotifier {
       if (data is Map) {
         _items.add(CartItem(
           productId: (data['productId'] ?? '').toString(),
-          name: data['name']?.toString() ?? '',
-          loc: data['loc']?.toString() ?? '',
+          name: data['name']?.toString() ?? 'Tiket Wisata',
+          // ✅ DITAMBAH: Fallback string jika server tidak mengirimkan loc & kategori
+          loc: data['loc']?.toString() ?? 'Lokasi tidak diketahui',
           img: data['img']?.toString() ?? '',
           harga: (data['price'] ?? data['harga'] ?? '0').toString(),
-          kategori: data['kategori']?.toString() ?? '',
+          kategori: data['kategori']?.toString() ?? 'Tiket',
           quantity: data['quantity'] ?? 1,
           addedAt: DateTime.now(),
         ));
@@ -55,7 +56,7 @@ class CartModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ DITAMBAH: tambah item dengan quantity langsung (dipakai dari tiket_page)
+  // tambah item dengan quantity langsung (dipakai dari tiket_page)
   void addItemWithQuantity(Map<String, String> data, int qty) {
     final existing = _items.where((i) => i.name == data['name']).toList();
     if (existing.isNotEmpty) {
@@ -64,10 +65,10 @@ class CartModel extends ChangeNotifier {
       _items.add(CartItem(
         productId: data['productId'] ?? '',
         name: data['name'] ?? '',
-        loc: data['loc'] ?? '',
+        loc: data['loc'] ?? 'Lokasi tidak diketahui',
         img: data['img'] ?? '',
-        harga: data['harga'] ?? '',
-        kategori: data['kategori'] ?? '',
+        harga: data['harga'] ?? '0',
+        kategori: data['kategori'] ?? 'Tiket',
         quantity: qty,
         addedAt: DateTime.now(),
       ));
@@ -90,10 +91,10 @@ class CartModel extends ChangeNotifier {
         _items.add(CartItem(
           productId: pId,
           name: data['name'] ?? '',
-          loc: data['loc'] ?? '',
+          loc: data['loc'] ?? 'Lokasi tidak diketahui',
           img: data['img'] ?? '',
           harga: data['hargaNum'] ?? '0',
-          kategori: data['kategori'] ?? '',
+          kategori: data['kategori'] ?? 'Tiket',
           quantity: qty,
         ));
       }
@@ -101,6 +102,7 @@ class CartModel extends ChangeNotifier {
     }
   }
 
+  // ✅ PERBAIKAN: Memastikan penghapusan menggunakan productId
   Future<void> removeItem(String productId) async {
     if (await ApiService.removeFromCart(productId)) {
       _items.removeWhere((i) => i.productId == productId);
@@ -113,6 +115,7 @@ class CartModel extends ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
+
   void clearLocal() {
     _items.clear();
     notifyListeners();
