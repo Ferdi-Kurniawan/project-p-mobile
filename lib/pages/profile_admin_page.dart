@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart'; // Pastikan path ini sesuai
+import 'login_page.dart'; // Pastikan path ini sesuai
 
 class ProfileAdminPage extends StatelessWidget {
   const ProfileAdminPage({super.key});
@@ -37,10 +40,8 @@ class ProfileAdminPage extends StatelessWidget {
       ),
       child: const Column(
         children: [
-          CircleAvatar(
-            radius: 50,
-            child: Icon(Icons.person, size: 60),
-          ),
+
+          CircleAvatar(radius: 50, child: Icon(Icons.person, size: 60)),
           SizedBox(height: 10),
           Text(
             "Admin Wisata",
@@ -50,10 +51,8 @@ class ProfileAdminPage extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Text(
-            "admin@wisata.com",
-            style: TextStyle(color: Colors.white70),
-          )
+          Text("admin@wisata.com", style: TextStyle(color: Colors.white70)),
+
         ],
       ),
     );
@@ -62,105 +61,58 @@ class ProfileAdminPage extends StatelessWidget {
   Widget _buildMenu(BuildContext context) {
     return Column(
       children: [
-
         _sectionTitle("Manajemen Konten"),
 
-        _menuItem(
-          Icons.category,
-          "Kelola Kategori",
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const KategoriPage(),
-              ),
-            );
-          },
-        ),
+        _menuItem(Icons.category, "Kelola Kategori", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const KategoriPage()),
+          );
+        }),
 
-        _menuItem(
-          Icons.inventory,
-          "Kelola Paket",
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ProdukPage(),
-              ),
-            );
-          },
-        ),
+        _menuItem(Icons.inventory, "Kelola Paket", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProdukPage()),
+          );
+        }),
 
-        const Divider(),
+        _menuItem(Icons.people, "Data User", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const UserPage()),
+          );
+        }),
 
-        _sectionTitle("Administrasi"),
+        _menuItem(Icons.receipt_long, "Data Transaksi", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TransaksiPage()),
+          );
+        }),
 
-        _menuItem(
-          Icons.people,
-          "Data User",
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const UserPage(),
-              ),
-            );
-          },
-        ),
-
-        _menuItem(
-          Icons.receipt_long,
-          "Data Transaksi",
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const TransaksiPage(),
-              ),
-            );
-          },
-        ),
-
-        _menuItem(
-          Icons.person,
-          "Profil Saya",
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const DetailProfilePage(),
-              ),
-            );
-          },
-        ),
+        _menuItem(Icons.person, "Profil Saya", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DetailProfilePage()),
+          );
+        }),
 
         const Divider(),
+        _menuItem(Icons.logout, "Keluar", () {
+          _logout(context);
+        }, isLogout: true),
 
         _sectionTitle("Sistem"),
 
-        _menuItem(
-          Icons.settings,
-          "Pengaturan",
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const PengaturanPage(),
-              ),
-            );
-          },
-        ),
+        _menuItem(Icons.settings, "Pengaturan", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PengaturanPage()),
+          );
+        }),
 
-        _menuItem(
-          Icons.logout,
-          "Keluar",
-          () {
-            _logout(context);
-          },
-          isLogout: true,
-        ),
-
-        const SizedBox(height: 20)
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -190,10 +142,7 @@ class ProfileAdminPage extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 6,
-        ),
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -214,68 +163,79 @@ class ProfileAdminPage extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  color: isLogout
-                      ? Colors.red
-                      : Colors.black,
-                ),
+
+                style: TextStyle(color: isLogout ? Colors.red : Colors.black),
               ),
             ),
-
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 15,
-            )
+            const Icon(Icons.arrow_forward_ios, size: 15),
           ],
         ),
       ),
     );
   }
 
+
+  // 👇 FUNGSI LOGOUT FULL (HAPUS SESI & PINDAH HALAMAN) 👇
   void _logout(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text("Logout"),
-          content: const Text(
-            "Yakin ingin keluar?"
+      barrierColor: Colors.black54,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Keluar dari Admin?',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        content: const Text(
+          'Sesi admin Anda akan berakhir dan Anda harus login kembali.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
           ),
-          actions: [
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // Tutup dialognya dulu
 
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Batal"),
+              // 1. Logout dari server backend
+              await ApiService.logout();
+
+              // 2. Bersihkan semua memori session (role, email, nama, dll dihapus)
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+
+              if (!context.mounted) return;
+
+              // 3. Lempar paksa ke halaman login dan babat habis riwayat halaman (gak bisa di-back)
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context)
-                    .showSnackBar(
-                  const SnackBar(
-                    content:
-                        Text("Logout berhasil"),
-                  ),
-                );
-              },
-              child: const Text("Keluar"),
-            ),
-          ],
-        );
-      },
+            child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }
 
+// =====================================================================
+// HALAMAN-HALAMAN DUMMY DI BAWAHNYA (TETAP SAMA)
+// =====================================================================
 
 // HALAMAN KATEGORI
 class KategoriPage extends StatelessWidget {
   const KategoriPage({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -285,99 +245,63 @@ class KategoriPage extends StatelessWidget {
       ),
       body: ListView(
         children: const [
-
           ListTile(
             leading: Icon(Icons.forest),
             title: Text("Wisata Alam"),
             subtitle: Text("Kebun Raya Liwa"),
           ),
-
           ListTile(
             leading: Icon(Icons.beach_access),
             title: Text("Wisata Pantai"),
             subtitle: Text("Pantai Pahawang"),
           ),
-
         ],
       ),
     );
   }
 }
 
-
 // HALAMAN PRODUK
 class ProdukPage extends StatelessWidget {
   const ProdukPage({super.key});
-
   @override
   Widget build(BuildContext context) {
-
-    List data=[
-      "Kebun Raya Liwa",
-      "Lembah Hijau",
-      "Pantai Pahawang"
-    ];
-
+    List data = ["Kebun Raya Liwa", "Lembah Hijau", "Pantai Pahawang"];
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Paket Wisata",
-        ),
-        backgroundColor:
-            Colors.deepOrange,
+        title: const Text("Paket Wisata"),
+        backgroundColor: Colors.deepOrange,
       ),
-
       body: ListView.builder(
         itemCount: data.length,
-        itemBuilder:(c,i){
-
+        itemBuilder: (c, i) {
           return ListTile(
-            leading: const Icon(
-              Icons.place
-            ),
+            leading: const Icon(Icons.place),
             title: Text(data[i]),
           );
-
         },
       ),
     );
   }
 }
 
-
 // USER
 class UserPage extends StatelessWidget {
   const UserPage({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title:
-            const Text("Data User"),
-      ),
-
+      appBar: AppBar(title: const Text("Data User")),
       body: ListView(
         children: const [
-
           ListTile(
-            leading: CircleAvatar(
-              child: Text("B"),
-            ),
-            title: Text(
-              "Budi"
-            ),
+            leading: CircleAvatar(child: Text("B")),
+            title: Text("Budi"),
           ),
-
           ListTile(
-            leading: CircleAvatar(
-              child: Text("S"),
-            ),
-            title: Text(
-              "Siti"
-            ),
+            leading: CircleAvatar(child: Text("S")),
+            title: Text("Siti"),
           ),
-
         ],
       ),
     );
@@ -388,102 +312,67 @@ class UserPage extends StatelessWidget {
 // TRANSAKSI
 class TransaksiPage extends StatelessWidget {
   const TransaksiPage({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title:
-            const Text(
-                "Transaksi"),
-      ),
-
+      appBar: AppBar(title: const Text("Transaksi")),
       body: ListView(
         children: const [
-
           ListTile(
-            leading:
-                Icon(Icons.receipt),
+            leading: Icon(Icons.receipt),
             title: Text("User A"),
-            subtitle:
-                Text("Selesai"),
+            subtitle: Text("Selesai"),
           ),
-
           ListTile(
-            leading:
-                Icon(Icons.receipt),
+            leading: Icon(Icons.receipt),
             title: Text("User B"),
-            subtitle:
-                Text("Pending"),
+            subtitle: Text("Pending"),
           ),
-
         ],
       ),
     );
   }
 }
 
-
 // PROFIL
-class DetailProfilePage
-    extends StatelessWidget {
-  const DetailProfilePage(
-      {super.key});
-
+class DetailProfilePage extends StatelessWidget {
+  const DetailProfilePage({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title:
-            const Text("Profil"),
-      ),
-
+      appBar: AppBar(title: const Text("Profil")),
       body: const Center(
         child: Text(
           "Admin Wisata\nadmin@wisata.com",
-          textAlign:
-              TextAlign.center,
+          textAlign: TextAlign.center,
         ),
       ),
     );
   }
 }
 
-
 // PENGATURAN
-class PengaturanPage
-    extends StatelessWidget {
-  const PengaturanPage(
-      {super.key});
-
+class PengaturanPage extends StatelessWidget {
+  const PengaturanPage({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-            "Pengaturan"),
-        backgroundColor:
-            Colors.deepOrange,
+        title: const Text("Pengaturan"),
+        backgroundColor: Colors.deepOrange,
       ),
-
       body: ListView(
         children: const [
-
           SwitchListTile(
             value: true,
             onChanged: null,
-            title: Text(
-                "Mode Gelap"),
+            title: Text("Mode Gelap"),
           ),
-
           ListTile(
-            leading:
-                Icon(Icons.info),
-            title:
-                Text("Versi App"),
-            subtitle:
-                Text("1.0.0"),
-          )
+            leading: Icon(Icons.info),
+            title: Text("Versi App"),
+            subtitle: Text("1.0.0"),
+          ),
         ],
       ),
     );
