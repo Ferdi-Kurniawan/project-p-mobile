@@ -362,9 +362,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // ══════════════════════════════════════════════════════
   //  BOTTOM NAV — pill gaya Traveloka
   // ══════════════════════════════════════════════════════
-  Widget _buildBottomNav() {
+ Widget _buildBottomNav() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      height: 72, // ← kontrol tinggi bebas
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
@@ -381,77 +382,64 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          selectedItemColor: _T.primary,
-          unselectedItemColor: _T.textMuted,
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 10,
-            letterSpacing: 0.2,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 10,
-          ),
-          onTap: (index) => setState(() => _currentIndex = index),
-          items: [
-            _navItem(Icons.explore_outlined, Icons.explore, "Beranda", 0),
-            _navItem(
-              Icons.airplane_ticket_outlined,
-              Icons.airplane_ticket,
-              "Tiket",
-              1,
-            ),
-            _navItem(
-              Icons.shopping_bag_outlined,
-              Icons.shopping_bag,
-              "Keranjang",
-              2,
-            ),
-            _navItem(Icons.event_note_outlined, Icons.event_note, "Booking", 3),
-            _navItem(
-              Icons.person_outline_rounded,
-              Icons.person_rounded,
-              "Profil",
-              4,
-            ),
-          ],
-        ),
+      child: Row(
+        children: [
+          _navItem(Icons.explore_outlined, Icons.explore, "Beranda", 0),
+          _navItem(Icons.airplane_ticket_outlined, Icons.airplane_ticket, "Tiket", 1),
+          _navItem(Icons.shopping_bag_outlined, Icons.shopping_bag, "Keranjang", 2),
+          _navItem(Icons.event_note_outlined, Icons.event_note, "Booking", 3),
+          _navItem(Icons.person_outline_rounded, Icons.person_rounded, "Profil", 4),
+        ],
       ),
     );
   }
 
-  BottomNavigationBarItem _navItem(
+  Widget _navItem(
     IconData inactive,
     IconData active,
     String label,
     int index,
   ) {
     final bool isActive = _currentIndex == index;
-    return BottomNavigationBarItem(
-      icon: AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutBack,
-        padding: EdgeInsets.symmetric(
-          horizontal: isActive ? 16 : 8,
-          vertical: 6,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentIndex = index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // ← benar-benar center
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutBack,
+              padding: EdgeInsets.symmetric(
+                horizontal: isActive ? 14 : 6,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: isActive ? _T.primarySurface : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                isActive ? active : inactive,
+                size: 22,
+                color: isActive ? _T.primary : _T.textMuted,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? _T.primary : _T.textMuted,
+                letterSpacing: isActive ? 0.2 : 0,
+              ),
+            ),
+          ],
         ),
-        decoration: BoxDecoration(
-          color: isActive ? _T.primarySurface : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Icon(isActive ? active : inactive, size: 22),
       ),
-      label: label,
     );
   }
-
   // ══════════════════════════════════════════════════════
   //  MAIN HOME CONTENT
   // ══════════════════════════════════════════════════════

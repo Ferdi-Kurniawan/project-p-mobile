@@ -160,6 +160,472 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  // ─────────────────────────────────────────────
+  // POPUP: Edit Profil
+  // ─────────────────────────────────────────────
+  void _showEditProfileDialog() {
+    final nameCtrl = TextEditingController(
+      text: widget.userData['fullname'] ?? _fullname,
+    );
+    final usernameCtrl = TextEditingController(
+      text: widget.userData['username'] ?? '',
+    );
+    final emailCtrl = TextEditingController(
+      text: widget.userData['email'] ?? '',
+    );
+    final phoneCtrl = TextEditingController(
+      text: widget.userData['phone'] ?? '',
+    );
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: teal500.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.person_outline_rounded,
+                      color: teal500,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Edit Profil',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: charcoal,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Perbarui informasi akun kamu di bawah ini.',
+                style: TextStyle(fontSize: 12, color: Colors.black45),
+              ),
+              const SizedBox(height: 24),
+
+              // Field: Nama Lengkap
+              _buildDialogField(
+                controller: nameCtrl,
+                label: 'Nama Lengkap',
+                icon: Icons.badge_outlined,
+                hint: 'Masukkan nama lengkap',
+              ),
+              const SizedBox(height: 14),
+
+              // Field: Username
+              _buildDialogField(
+                controller: usernameCtrl,
+                label: 'Username',
+                icon: Icons.alternate_email_rounded,
+                hint: 'Masukkan username',
+              ),
+              const SizedBox(height: 14),
+
+              // Field: Email
+              _buildDialogField(
+                controller: emailCtrl,
+                label: 'Email',
+                icon: Icons.email_outlined,
+                hint: 'Masukkan email',
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 14),
+
+              // Field: No. Handphone
+              _buildDialogField(
+                controller: phoneCtrl,
+                label: 'No. Handphone',
+                icon: Icons.phone_outlined,
+                hint: 'Contoh: +62 812-3456-7890',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 28),
+
+              // Tombol aksi
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF6B7E8D),
+                        side: const BorderSide(color: Color(0xFFCDD7DE)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Batal',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // TODO: Kirim ke backend
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: teal500,
+                        foregroundColor: white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Simpan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // POPUP: Ubah Password
+  // ─────────────────────────────────────────────
+  void _showChangePasswordDialog() {
+    final oldPassCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    bool obscureOld = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          backgroundColor: white,
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: teal500.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.lock_outline_rounded,
+                        color: teal500,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Ubah Password',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: charcoal,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Pastikan password baru kamu kuat dan mudah diingat.',
+                  style: TextStyle(fontSize: 12, color: Colors.black45),
+                ),
+                const SizedBox(height: 24),
+
+                // Field: Password Lama
+                _buildPasswordField(
+                  controller: oldPassCtrl,
+                  label: 'Password Saat Ini',
+                  hint: 'Masukkan password saat ini',
+                  obscure: obscureOld,
+                  onToggle: () =>
+                      setDialogState(() => obscureOld = !obscureOld),
+                ),
+                const SizedBox(height: 14),
+
+                // Field: Password Baru
+                _buildPasswordField(
+                  controller: newPassCtrl,
+                  label: 'Password Baru',
+                  hint: 'Minimal 8 karakter',
+                  obscure: obscureNew,
+                  onToggle: () =>
+                      setDialogState(() => obscureNew = !obscureNew),
+                ),
+                const SizedBox(height: 14),
+
+                // Field: Konfirmasi Password
+                _buildPasswordField(
+                  controller: confirmPassCtrl,
+                  label: 'Konfirmasi Password Baru',
+                  hint: 'Ulangi password baru',
+                  obscure: obscureConfirm,
+                  onToggle: () =>
+                      setDialogState(() => obscureConfirm = !obscureConfirm),
+                ),
+                const SizedBox(height: 28),
+
+                // Tombol aksi
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF6B7E8D),
+                          side: const BorderSide(color: Color(0xFFCDD7DE)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // TODO: Kirim ke backend
+                          Navigator.pop(ctx);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: teal500,
+                          foregroundColor: white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Simpan',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Helper: Field teks biasa untuk dialog
+  // ─────────────────────────────────────────────
+  Widget _buildDialogField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: charcoal,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: const TextStyle(fontSize: 14, color: charcoal),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
+            prefixIcon: Icon(icon, size: 18, color: teal500),
+            filled: true,
+            fillColor: const Color(0xFFF7F9FA),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: teal500, width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Helper: Field password dengan toggle visibility
+  // ─────────────────────────────────────────────
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required bool obscure,
+    required VoidCallback onToggle,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: charcoal,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          obscureText: obscure,
+          style: const TextStyle(fontSize: 14, color: charcoal),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
+            prefixIcon:
+                const Icon(Icons.lock_outline_rounded, size: 18, color: teal500),
+            suffixIcon: GestureDetector(
+              onTap: onToggle,
+              child: Icon(
+                obscure
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                size: 18,
+                color: Colors.black38,
+              ),
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF7F9FA),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: teal500, width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Menggunakan nama yang sudah dimuat dari session
@@ -167,78 +633,89 @@ class _ProfilePageState extends State<ProfilePage>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 36),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileHero(displayFullname),
-            const SizedBox(height: 24),
+      // ── FIX: gunakan CustomScrollView + SliverList agar scroll bekerja
+      // penuh bahkan saat ada BackdropFilter di hero section
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfileHero(displayFullname),
+                const SizedBox(height: 24),
 
-            _buildSectionHeader("Aktivitas"),
-            _buildMenuCard(
-              Icons.favorite_outline,
-              "Wisata Favorit",
-              subtitle: "Lihat daftar favorit kamu",
-            ),
-            _buildMenuCard(
-              Icons.receipt_long_outlined,
-              "Riwayat Tiket",
-              subtitle: "Cek tiket yang pernah dibeli",
-              onTap: () => _showBookingHistory(),
-            ),
+                _buildSectionHeader("Aktivitas"),
+                _buildMenuCard(
+                  Icons.favorite_outline,
+                  "Wisata Favorit",
+                  subtitle: "Lihat daftar favorit kamu",
+                ),
+                _buildMenuCard(
+                  Icons.receipt_long_outlined,
+                  "Riwayat Tiket",
+                  subtitle: "Cek tiket yang pernah dibeli",
+                  onTap: () => _showBookingHistory(),
+                ),
 
-            const SizedBox(height: 8),
-            _buildSectionHeader("Pengaturan Akun"),
-            _buildMenuCard(
-              Icons.person_outline_rounded,
-              "Edit Profil",
-              subtitle: "Ubah nama dan informasi akun",
-            ),
-            _buildMenuCard(
-              Icons.lock_outline_rounded,
-              "Ubah Password",
-              subtitle: "Perbarui kata sandi kamu",
-            ),
+                const SizedBox(height: 8),
+                _buildSectionHeader("Pengaturan Akun"),
+                _buildMenuCard(
+                  Icons.person_outline_rounded,
+                  "Edit Profil",
+                  subtitle: "Ubah nama dan informasi akun",
+                  onTap: () => _showEditProfileDialog(),
+                ),
+                _buildMenuCard(
+                  Icons.lock_outline_rounded,
+                  "Ubah Password",
+                  subtitle: "Perbarui kata sandi kamu",
+                  onTap: () => _showChangePasswordDialog(),
+                ),
 
-            const SizedBox(height: 8),
-            _buildSectionHeader("Preferensi"),
-            _buildToggleCard(
-              icon: Icons.notifications_outlined,
-              label: "Notifikasi",
-              subtitle: "Aktifkan pemberitahuan",
-              value: _notifEnabled,
-              onChanged: (val) => setState(() => _notifEnabled = val),
-            ),
-            _buildToggleCard(
-              icon: Icons.dark_mode_outlined,
-              label: "Mode Gelap",
-              subtitle: "Ubah tema tampilan",
-              value: _darkMode,
-              onChanged: (val) => setState(() => _darkMode = val),
-            ),
+                const SizedBox(height: 8),
+                _buildSectionHeader("Preferensi"),
+                _buildToggleCard(
+                  icon: Icons.notifications_outlined,
+                  label: "Notifikasi",
+                  subtitle: "Aktifkan pemberitahuan",
+                  value: _notifEnabled,
+                  onChanged: (val) => setState(() => _notifEnabled = val),
+                ),
+                _buildToggleCard(
+                  icon: Icons.dark_mode_outlined,
+                  label: "Mode Gelap",
+                  subtitle: "Ubah tema tampilan",
+                  value: _darkMode,
+                  onChanged: (val) => setState(() => _darkMode = val),
+                ),
 
-            const SizedBox(height: 8),
-            _buildSectionHeader("Lainnya"),
-            _buildMenuCard(
-              Icons.help_outline_rounded,
-              "Bantuan & FAQ",
-              subtitle: "Pusat bantuan pengguna",
+                const SizedBox(height: 8),
+                _buildSectionHeader("Lainnya"),
+                _buildMenuCard(
+                  Icons.help_outline_rounded,
+                  "Bantuan & FAQ",
+                  subtitle: "Pusat bantuan pengguna",
+                ),
+                _buildMenuCard(
+                  Icons.info_outline_rounded,
+                  "Tentang Aplikasi",
+                  subtitle: "Versi 1.0.0",
+                ),
+                _buildMenuCard(
+                  Icons.logout_rounded,
+                  "Logout",
+                  subtitle: "Keluar dari akun",
+                  isDestructive: true,
+                  onTap: () => _handleLogout(),
+                ),
+
+                // padding bawah agar konten tidak terpotong navbar
+                const SizedBox(height: 80),
+              ],
             ),
-            _buildMenuCard(
-              Icons.info_outline_rounded,
-              "Tentang Aplikasi",
-              subtitle: "Versi 1.0.0",
-            ),
-            _buildMenuCard(
-              Icons.logout_rounded,
-              "Logout",
-              subtitle: "Keluar dari akun",
-              isDestructive: true,
-              onTap: () => _handleLogout(),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -307,7 +784,6 @@ class _ProfilePageState extends State<ProfilePage>
                   shadows: [Shadow(color: Colors.black38, blurRadius: 6)],
                 ),
               ),
-              // Bagian Premium Traveler telah dihilangkan agar desain lebih bersih
             ],
           ),
         ),
