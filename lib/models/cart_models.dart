@@ -22,7 +22,8 @@ class CartItem {
     this.addedAt,
   });
 
-  int get hargaInt => int.tryParse(harga.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+  int get hargaInt =>
+      int.tryParse(harga.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
   int get subtotal => hargaInt * quantity;
 }
 
@@ -36,84 +37,77 @@ class CartModel extends ChangeNotifier {
   int get totalHarga => _items.fold(0, (sum, i) => sum + i.subtotal);
   int get totalItems => _items.fold(0, (sum, i) => sum + i.quantity);
 
+  // Sync data dari server ke lokal
   void updateItemsFromServer(List<dynamic> serverCart) {
     _items.clear();
     for (var data in serverCart) {
       if (data is Map) {
-        _items.add(CartItem(
-          productId: (data['productId'] ?? '').toString(),
-          name: data['name']?.toString() ?? 'Tiket Wisata',
-          // ✅ DITAMBAH: Fallback string jika server tidak mengirimkan loc & kategori
-          loc: data['loc']?.toString() ?? 'Lokasi tidak diketahui',
-          img: data['img']?.toString() ?? '',
-          harga: (data['price'] ?? data['harga'] ?? '0').toString(),
-          kategori: data['kategori']?.toString() ?? 'Tiket',
-          quantity: data['quantity'] ?? 1,
-          addedAt: DateTime.now(),
-        ));
+        _items.add(
+          CartItem(
+            productId: (data['productId'] ?? '').toString(),
+            name: data['name']?.toString() ?? 'Tiket Wisata',
+            loc: data['loc']?.toString() ?? 'Lokasi tidak diketahui',
+            img: data['img']?.toString() ?? '',
+            harga: (data['price'] ?? data['harga'] ?? '0').toString(),
+            kategori: data['kategori']?.toString() ?? 'Tiket',
+            quantity: data['quantity'] ?? 1,
+            addedAt: DateTime.now(),
+          ),
+        );
       }
     }
     notifyListeners();
   }
 
-  // tambah item dengan quantity langsung (dipakai dari tiket_page)
-  void addItemWithQuantity(Map<String, String> data, int qty) {
-    final existing = _items.where((i) => i.name == data['name']).toList();
-    if (existing.isNotEmpty) {
-      existing.first.quantity += qty;
-    } else {
-      _items.add(CartItem(
-        productId: data['productId'] ?? '',
-        name: data['name'] ?? '',
-        loc: data['loc'] ?? 'Lokasi tidak diketahui',
-        img: data['img'] ?? '',
-        harga: data['harga'] ?? '0',
-        kategori: data['kategori'] ?? 'Tiket',
-        quantity: qty,
-        addedAt: DateTime.now(),
-      ));
-    }
-    notifyListeners();
-  }
-
-  Future<void> addItem(Map<String, String> data, int qty) async {
+  Future<Map<String, dynamic>> addItem(
+    Map<String, String> data,
+    int qty,
+  ) async {
     final String? pId = data['productId'];
-    if (pId == null || pId.isEmpty) return;
+    if (pId == null || pId.isEmpty)
+      return {"success": false, "message": "ID Kosong"};
 
-    bool success = await ApiService.addToCart(pId, qty);
-    print("Add to Cart Success: $success");
-    if (success) {
+    // result di sini sekarang pasti Map, bukan bool lagi
+    Map<String, dynamic> result = await ApiService.addToCart(pId, qty);
+
+    if (result['success'] == true) {
       final idx = _items.indexWhere((i) => i.productId == pId);
-      print("Item index in local list: $idx");
       if (idx != -1) {
         _items[idx].quantity += qty;
       } else {
-        _items.add(CartItem(
-          productId: pId,
-          name: data['name'] ?? '',
-          loc: data['loc'] ?? 'Lokasi tidak diketahui',
-          img: data['img'] ?? '',
-          harga: data['hargaNum'] ?? '0',
-          kategori: data['kategori'] ?? 'Tiket',
-          quantity: qty,
-        ));
+        _items.add(
+          CartItem(
+            productId: pId,
+            name: data['name'] ?? '',
+            loc: data['loc'] ?? 'Lokasi tidak diketahui',
+            img: data['img'] ?? '',
+            harga: data['hargaNum'] ?? '0',
+            kategori: data['kategori'] ?? 'Tiket',
+            quantity: qty,
+          ),
+        );
       }
       notifyListeners();
     }
+    return result; // Pastikan mengembalikan Map
   }
 
-  // ✅ PERBAIKAN: Memastikan penghapusan menggunakan productId
-  Future<void> removeItem(String productId) async {
-    if (await ApiService.removeFromCart(productId)) {
+  Future<Map<String, dynamic>> removeItem(String productId) async {
+    final result = await ApiService.removeFromCart(productId);
+    if (result['success'] == true) {
       _items.removeWhere((i) => i.productId == productId);
       notifyListeners();
     }
+    return result;
   }
 
-  Future<void> clear() async {
-    await ApiService.clearCart();
-    _items.clear();
-    notifyListeners();
+  Future<Map<String, dynamic>> clear() async {
+    final result = await ApiService.clearCart();
+    if (result['success'] == true) {
+      _items.clear();
+      notifyListeners();
+    }
+    return result;
   }
 
   void clearLocal() {

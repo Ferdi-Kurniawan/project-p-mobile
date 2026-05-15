@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui'; // Diperlukan untuk efek Frosted Glass / BackdropFilter
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../helper/snackbar_helper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -23,31 +24,36 @@ class _LoginPageState extends State<LoginPage> {
 
   void login() async {
     if (email.text.isEmpty || password.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Email & Password wajib diisi"),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      CustomSnackBar.show(context, "Email & Password wajib diisi", false);
       return;
     }
 
     setState(() => isLoading = true);
 
-    final user = await ApiService.login(email.text, password.text);
+    // Ambil hasil Map dari ApiService
+    final result = await ApiService.login(email.text, password.text);
 
+    if (!mounted) return;
     setState(() => isLoading = false);
 
-    if (user != null) {
+    if (result['success'] == true) {
+      final user = result['user'];
+
+      // Simpan data ke SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('role', user['role']);
       await prefs.setString('fullname', user['fullname']);
       await prefs.setString('email', user['email']);
-      Navigator.pushReplacementNamed(context, '/home');
+
+      // Tampilkan pesan sukses dari backend
+      CustomSnackBar.show(context, result['message'], true);
+
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) Navigator.pushReplacementNamed(context, '/home');
+      });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login gagal")),
-      );
+      // Tampilkan pesan error murni dari backend (misal: "Password salah")
+      CustomSnackBar.show(context, result['message'], false);
     }
   }
 
@@ -68,23 +74,31 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               child: Container(
-  decoration: BoxDecoration(
-    gradient: LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        Colors.black.withOpacity(0.35),
-        Colors.black.withOpacity(0.60),
-      ],
-    ),
-  ),
-),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.35),
+                      Colors.black.withOpacity(0.60),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
 
           // 2. AMBIENT GLOWS
-          Positioned(top: 100, right: -50, child: _buildAmbientOrb(tealDeep.withOpacity(0.12))),
-          Positioned(bottom: 50, left: -50, child: _buildAmbientOrb(oceanBlueDeep.withOpacity(0.12))),
+          Positioned(
+            top: 100,
+            right: -50,
+            child: _buildAmbientOrb(tealDeep.withOpacity(0.12)),
+          ),
+          Positioned(
+            bottom: 50,
+            left: -50,
+            child: _buildAmbientOrb(oceanBlueDeep.withOpacity(0.12)),
+          ),
 
           Center(
             child: SingleChildScrollView(
@@ -94,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     _buildTopLogo(),
                     const SizedBox(height: 25),
-                    
+
                     // 3. MAIN FORM CARD: Glassmorphism Effect
                     ClipRRect(
                       borderRadius: BorderRadius.circular(45),
@@ -105,7 +119,10 @@ class _LoginPageState extends State<LoginPage> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(45),
-                            border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.5),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.25),
+                              width: 1.5,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.06),
@@ -129,7 +146,10 @@ class _LoginPageState extends State<LoginPage> {
                               const SizedBox(height: 8),
                               Text(
                                 "Masuk untuk eksplorasi nusantara",
-                                style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 14,
+                                ),
                               ),
                               const SizedBox(height: 35),
 
@@ -151,27 +171,36 @@ class _LoginPageState extends State<LoginPage> {
                                 hintText: "Masukkan kata sandi",
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    isPasswordVisible
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
                                     color: tealDeep.withOpacity(0.6),
                                     size: 20,
                                   ),
-                                  onPressed: () => setState(() => isPasswordVisible = !isPasswordVisible),
+                                  onPressed: () => setState(
+                                    () =>
+                                        isPasswordVisible = !isPasswordVisible,
+                                  ),
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 35),
-                              
+
                               // SUBMIT BUTTON
                               _buildSubmitButton(),
-                              
+
                               const SizedBox(height: 25),
-                              
+
                               // LINK KE REGISTER
                               GestureDetector(
-                                onTap: () => Navigator.pushNamed(context, '/register'),
+                                onTap: () =>
+                                    Navigator.pushNamed(context, '/register'),
                                 child: RichText(
                                   text: const TextSpan(
-                                    style: TextStyle(color: charcoalGrey, fontSize: 14),
+                                    style: TextStyle(
+                                      color: charcoalGrey,
+                                      fontSize: 14,
+                                    ),
                                     children: [
                                       TextSpan(text: "Belum punya akun? "),
                                       TextSpan(
@@ -219,24 +248,31 @@ class _LoginPageState extends State<LoginPage> {
       child: TextField(
         controller: controller,
         obscureText: isObscure,
-        textAlignVertical: TextAlignVertical.center, // Teks input tepat di tengah secara vertikal
+        textAlignVertical: TextAlignVertical
+            .center, // Teks input tepat di tengah secara vertikal
         style: const TextStyle(
-          color: charcoalGrey, 
+          color: charcoalGrey,
           fontWeight: FontWeight.w600,
           fontSize: 15,
         ),
         decoration: InputDecoration(
           // Pengaturan Label & Placeholder
           labelText: label,
-          labelStyle: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
+          labelStyle: TextStyle(
+            color: Colors.white.withOpacity(0.6),
+            fontSize: 13,
+          ),
           floatingLabelStyle: const TextStyle(
-            color: tealDeep, 
-            fontWeight: FontWeight.w800, 
+            color: tealDeep,
+            fontWeight: FontWeight.w800,
             fontSize: 17,
           ),
-          
+
           hintText: hintText,
-          hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
+          hintStyle: TextStyle(
+            color: Colors.white.withOpacity(0.3),
+            fontSize: 13,
+          ),
 
           // Ikon Prefix (Ikon di kiri)
           prefixIcon: Padding(
@@ -250,9 +286,12 @@ class _LoginPageState extends State<LoginPage> {
 
           // Menghilangkan Border Default agar menggunakan style Container
           border: InputBorder.none,
-          
+
           // Padding konten untuk merapihkan teks placeholder & input
-          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 18,
+            horizontal: 16,
+          ),
         ),
       ),
     );
@@ -268,7 +307,11 @@ class _LoginPageState extends State<LoginPage> {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withOpacity(0.5)),
           ),
-          child: const Icon(Icons.auto_awesome_rounded, size: 42, color: tealDeep),
+          child: const Icon(
+            Icons.auto_awesome_rounded,
+            size: 42,
+            color: tealDeep,
+          ),
         ),
         const SizedBox(height: 12),
         const Text(
@@ -308,13 +351,18 @@ class _LoginPageState extends State<LoginPage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
         ),
         child: isLoading
             ? const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
               )
             : const Text(
                 "MASUK",
@@ -335,9 +383,7 @@ class _LoginPageState extends State<LoginPage> {
       height: 280,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color, Colors.transparent],
-        ),
+        gradient: RadialGradient(colors: [color, Colors.transparent]),
       ),
     );
   }

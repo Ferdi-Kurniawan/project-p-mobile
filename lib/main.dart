@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/home_page.dart';
-import 'pages/check_session_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +16,6 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/check',
       routes: {
-        '/check': (context) => const CheckSessionPage(),
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
         '/home': (context) => const HomePage(),

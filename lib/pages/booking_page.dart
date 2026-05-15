@@ -3,24 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
 import 'package:flutter_application_2/services/api_service.dart';
+import '../helper/snackbar_helper.dart';
 
 // ════════════════════════════════════════════════════════
 //  DESIGN TOKENS — Premium Teal Theme
 // ════════════════════════════════════════════════════════
 class _T {
-  static const Color primary        = Color(0xFF00B09B);
-  static const Color primaryDark    = Color(0xFF007A6A);
-  static const Color primaryLight   = Color(0xFF4DD9C9);
+  static const Color primary = Color(0xFF00B09B);
+  static const Color primaryDark = Color(0xFF007A6A);
+  static const Color primaryLight = Color(0xFF4DD9C9);
   static const Color primarySurface = Color(0xFFE0F7F4);
   static const List<Color> headerGrad = [Color(0xFF00B09B), Color(0xFF00D2B4)];
-  static const Color accent         = Color(0xFFFF6B35);
-  static const Color bgPage         = Color(0xFFF4F9F8); // Sedikit lebih bersih dari sebelumnya
-  static const Color bgCard         = Color(0xFFFFFFFF);
-  static const Color textHead       = Color(0xFF0D2B26);
-  static const Color textBody       = Color(0xFF4A6B66);
-  static const Color textMuted      = Color(0xFFA0B8B5);
-  static const Color divider        = Color(0xFFDCF0EE);
-  static const Color green          = Color(0xFF00C48C);
+  static const Color accent = Color(0xFFFF6B35);
+  static const Color bgPage = Color(
+    0xFFF4F9F8,
+  ); // Sedikit lebih bersih dari sebelumnya
+  static const Color bgCard = Color(0xFFFFFFFF);
+  static const Color textHead = Color(0xFF0D2B26);
+  static const Color textBody = Color(0xFF4A6B66);
+  static const Color textMuted = Color(0xFFA0B8B5);
+  static const Color divider = Color(0xFFDCF0EE);
+  static const Color green = Color(0xFF00C48C);
 }
 
 class BookingPage extends StatefulWidget {
@@ -37,14 +40,15 @@ class BookingPage extends StatefulWidget {
     DateTime? tanggalMulai,
     DateTime? tanggalSelesai,
     this.totalHarga = 0,
-  })  : tanggalMulai = tanggalMulai ?? DateTime.now(),
-        tanggalSelesai = tanggalSelesai ?? DateTime.now();
+  }) : tanggalMulai = tanggalMulai ?? DateTime.now(),
+       tanggalSelesai = tanggalSelesai ?? DateTime.now();
 
   @override
   State<BookingPage> createState() => _BookingPageState();
 }
 
-class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin {
+class _BookingPageState extends State<BookingPage>
+    with TickerProviderStateMixin {
   late AnimationController _fadeCtrl;
   late AnimationController _pulseCtrl;
   late Animation<double> _fadeAnim;
@@ -64,12 +68,21 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
 
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _pulseAnim = Tween<double>(begin: 0.96, end: 1.04).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-    
+    _pulseAnim = Tween<double>(
+      begin: 0.96,
+      end: 1.04,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+
     _fadeCtrl.forward();
     if (widget.items.isEmpty) _fetchHistory();
   }
@@ -105,13 +118,26 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
     if (dateStr == null || dateStr.isEmpty || dateStr == '-') return '-';
     try {
       DateTime dt = DateTime.parse(dateStr);
-      const bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const bulan = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
+      ];
       return '${dt.day} ${bulan[dt.month - 1]} ${dt.year}';
     } catch (e) {
-      return dateStr; 
+      return dateStr;
     }
   }
-  
+
   String _formatRupiah(int amount) {
     final str = amount.toString();
     final buffer = StringBuffer();
@@ -125,16 +151,21 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
   Future<void> _handleCreateBooking() async {
     setState(() => _isLoading = true);
     final result = await ApiService.createBooking(
-      startDate: "${widget.tanggalMulai.year}-${widget.tanggalMulai.month}-${widget.tanggalMulai.day}",
-      endDate: "${widget.tanggalSelesai.year}-${widget.tanggalSelesai.month}-${widget.tanggalSelesai.day}",
+      startDate:
+          "${widget.tanggalMulai.year}-${widget.tanggalMulai.month}-${widget.tanggalMulai.day}",
+      endDate:
+          "${widget.tanggalSelesai.year}-${widget.tanggalSelesai.month}-${widget.tanggalSelesai.day}",
     );
     setState(() => _isLoading = false);
     if (result != null) {
       setState(() {
         var data = result['data'] ?? result;
         var bookingData = data['booking'] ?? data['bookings'] ?? data;
-        _bookingIdFromBackend = (bookingData['id'] ?? bookingData['_id'])?.toString();
-        _ticketCodeFromBackend = (bookingData['ticket_code'] ?? bookingData['ticketCode'])?.toString();
+        _bookingIdFromBackend = (bookingData['id'] ?? bookingData['_id'])
+            ?.toString();
+        _ticketCodeFromBackend =
+            (bookingData['ticket_code'] ?? bookingData['ticketCode'])
+                ?.toString();
         _isBookingCreated = true;
       });
       CartModel.instance.clear();
@@ -147,18 +178,43 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
     if (pickedFile != null) {
       setState(() {
         _imageProof = File(pickedFile.path);
         _isLoading = true;
       });
+
       final res = await ApiService.uploadPaymentProof(
         bookingId: _bookingIdFromBackend!,
         paymentMethod: 'Transfer Bank',
         imageFile: _imageProof!,
       );
+
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (res != null) _showSuksesSheet();
+
+      final bool isSuccess = res['success'] == true;
+      final String msg = res['message'];
+
+      CustomSnackBar.show(context, msg, isSuccess);
+
+      if (isSuccess) {
+        // ── PERBAIKAN DI SINI ──
+        setState(() {
+          // Update status lokal agar UI berubah menjadi TERVERIFIKASI
+          _currentStatus = "paid";
+        });
+
+        // Muat ulang riwayat agar saat kembali ke daftar, statusnya sudah terupdate
+        _fetchHistory();
+
+        _showSuksesSheet();
+      } else {
+        setState(() {
+          _imageProof = null;
+        });
+      }
     }
   }
 
@@ -173,7 +229,9 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
           ? _buildLoadingOverlay()
           : FadeTransition(
               opacity: _fadeAnim,
-              child: (widget.items.isEmpty && !_isBookingCreated) ? _buildHistoryView() : _buildDetailView(),
+              child: (widget.items.isEmpty && !_isBookingCreated)
+                  ? _buildHistoryView()
+                  : _buildDetailView(),
             ),
       bottomNavigationBar: _buildBottomBar(),
     );
@@ -190,31 +248,45 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
             ScaleTransition(
               scale: _pulseAnim,
               child: Container(
-                width: 88, height: 88,
+                width: 88,
+                height: 88,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(colors: _T.headerGrad),
                   boxShadow: [
-                    BoxShadow(color: _T.primary.withOpacity(0.30), blurRadius: 30, offset: const Offset(0, 10))
+                    BoxShadow(
+                      color: _T.primary.withOpacity(0.30),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
                   ],
                 ),
                 child: const Center(
                   child: SizedBox(
-                    width: 40, height: 40,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3.5),
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3.5,
+                    ),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 24),
             const Text(
-              "Memproses Transaksi...", 
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _T.textHead, letterSpacing: 0.3)
+              "Memproses Transaksi...",
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: _T.textHead,
+                letterSpacing: 0.3,
+              ),
             ),
             const SizedBox(height: 4),
             const Text(
-              "Mohon tunggu sebentar", 
-              style: TextStyle(fontSize: 12, color: _T.textBody)
+              "Mohon tunggu sebentar",
+              style: TextStyle(fontSize: 12, color: _T.textBody),
             ),
           ],
         ),
@@ -230,9 +302,9 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
       physics: const BouncingScrollPhysics(),
       slivers: [
         _buildSliverHeader(
-          icon: Icons.confirmation_number_outlined, 
-          title: "Tiket Saya", 
-          subtitle: "Kelola riwayat pemesanan & akses cepat tiket Anda"
+          icon: Icons.confirmation_number_outlined,
+          title: "Tiket Saya",
+          subtitle: "Kelola riwayat pemesanan & akses cepat tiket Anda",
         ),
         SliverToBoxAdapter(
           child: FutureBuilder<List<dynamic>>(
@@ -240,8 +312,10 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
-                  padding: EdgeInsets.only(top: 100), 
-                  child: Center(child: CircularProgressIndicator(color: _T.primary))
+                  padding: EdgeInsets.only(top: 100),
+                  child: Center(
+                    child: CircularProgressIndicator(color: _T.primary),
+                  ),
                 );
               }
               final bookings = snapshot.data ?? [];
@@ -250,7 +324,9 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
                 child: Column(
-                  children: bookings.map((b) => _buildPremiumHistoryCard(b)).toList(),
+                  children: bookings
+                      .map((b) => _buildPremiumHistoryCard(b))
+                      .toList(),
                 ),
               );
             },
@@ -275,7 +351,11 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: _T.divider.withOpacity(0.6), width: 1.2),
         boxShadow: [
-          BoxShadow(color: _T.textHead.withOpacity(0.04), blurRadius: 24, offset: const Offset(0, 8)),
+          BoxShadow(
+            color: _T.textHead.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Material(
@@ -305,52 +385,79 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: isPaid ? _T.green.withOpacity(0.12) : _T.accent.withOpacity(0.12),
+                            color: isPaid
+                                ? _T.green.withOpacity(0.12)
+                                : _T.accent.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isPaid ? Icons.check_circle_rounded : Icons.schedule_rounded, 
-                                color: isPaid ? _T.green : _T.accent, 
-                                size: 14
+                                isPaid
+                                    ? Icons.check_circle_rounded
+                                    : Icons.schedule_rounded,
+                                color: isPaid ? _T.green : _T.accent,
+                                size: 14,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 isPaid ? "TERVERIFIKASI" : "MENUNGGU BAYAR",
                                 style: TextStyle(
-                                  fontSize: 10, 
-                                  fontWeight: FontWeight.w800, 
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
                                   color: isPaid ? _T.primaryDark : _T.accent,
-                                  letterSpacing: 0.5
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Icon(Icons.arrow_forward_ios_rounded, color: _T.textMuted.withOpacity(0.5), size: 14),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: _T.textMuted.withOpacity(0.5),
+                          size: 14,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     Text(
                       ticketCode,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _T.textHead, letterSpacing: 1.0),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: _T.textHead,
+                        letterSpacing: 1.0,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.event_available_rounded, size: 14, color: _T.primary),
+                        const Icon(
+                          Icons.event_available_rounded,
+                          size: 14,
+                          color: _T.primary,
+                        ),
                         const SizedBox(width: 6),
-                        Text("Kunjungan: $date", style: const TextStyle(fontSize: 13, color: _T.textBody, fontWeight: FontWeight.w500)),
+                        Text(
+                          "Kunjungan: $date",
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: _T.textBody,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              
+
               // Garis Pemisah Tiket (Dashed Line + Inner Notches)
               Stack(
                 children: [
@@ -359,14 +466,18 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                     child: Center(
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          final dashCount = (constraints.constrainWidth() / 10).floor();
+                          final dashCount = (constraints.constrainWidth() / 10)
+                              .floor();
                           return Flex(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             direction: Axis.horizontal,
                             children: List.generate(dashCount, (_) {
                               return SizedBox(
-                                width: 5, height: 1.5,
-                                child: DecoratedBox(decoration: BoxDecoration(color: _T.divider)),
+                                width: 5,
+                                height: 1.5,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(color: _T.divider),
+                                ),
                               );
                             }),
                           );
@@ -375,17 +486,29 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                     ),
                   ),
                   Positioned(
-                    left: -12, top: 0, bottom: 0,
+                    left: -12,
+                    top: 0,
+                    bottom: 0,
                     child: Container(
-                      width: 24, height: 24,
-                      decoration: const BoxDecoration(color: _T.bgPage, shape: BoxShape.circle),
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        color: _T.bgPage,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                   Positioned(
-                    right: -12, top: 0, bottom: 0,
+                    right: -12,
+                    top: 0,
+                    bottom: 0,
                     child: Container(
-                      width: 24, height: 24,
-                      decoration: const BoxDecoration(color: _T.bgPage, shape: BoxShape.circle),
+                      width: 24,
+                      height: 24,
+                      decoration: const BoxDecoration(
+                        color: _T.bgPage,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                 ],
@@ -400,19 +523,26 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Total Pembayaran", style: TextStyle(fontSize: 11, color: _T.textMuted)),
+                        const Text(
+                          "Total Pembayaran",
+                          style: TextStyle(fontSize: 11, color: _T.textMuted),
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           _formatRupiah(price),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _T.primary),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: _T.primary,
+                          ),
                         ),
                       ],
                     ),
                     Text(
                       isPaid ? "Lihat E-Tiket" : "Bayar Sekarang",
                       style: TextStyle(
-                        fontSize: 13, 
-                        fontWeight: FontWeight.w800, 
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
                         color: isPaid ? _T.primary : _T.accent,
                       ),
                     ),
@@ -430,17 +560,25 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
   //  TAMPILAN B: DETAIL PESANAN & PEMBAYARAN (DETAIL VIEW)
   // ════════════════════════════════════════════════════════
   Widget _buildDetailView() {
-    final bool isPaid = _currentStatus?.contains('paid') == true || _currentStatus?.contains('success') == true;
-    final int total = (_isBookingCreated && widget.items.isEmpty) ? _activeTotalFromHistory : widget.totalHarga;
+    final bool isPaid =
+        _currentStatus?.contains('paid') == true ||
+        _currentStatus?.contains('success') == true;
+    final int total = (_isBookingCreated && widget.items.isEmpty)
+        ? _activeTotalFromHistory
+        : widget.totalHarga;
     final String title = isPaid ? "E-Tiket Resmi" : "Selesaikan Pembayaran";
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         _buildSliverHeader(
-          icon: isPaid ? Icons.verified_user_rounded : Icons.account_balance_wallet_rounded, 
-          title: title, 
-          subtitle: _ticketCodeFromBackend != null ? "Booking Ref: $_ticketCodeFromBackend" : "Verifikasi instruksi di bawah ini",
+          icon: isPaid
+              ? Icons.verified_user_rounded
+              : Icons.account_balance_wallet_rounded,
+          title: title,
+          subtitle: _ticketCodeFromBackend != null
+              ? "Booking Ref: $_ticketCodeFromBackend"
+              : "Verifikasi instruksi di bawah ini",
           onBack: () {
             if (_isBookingCreated && widget.items.isEmpty) {
               setState(() => _isBookingCreated = false);
@@ -459,23 +597,35 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                 const SizedBox(height: 24),
 
                 if (widget.items.isNotEmpty) ...[
-                  _buildSectionHeader("Item Dipesan", Icons.shopping_bag_rounded),
+                  _buildSectionHeader(
+                    "Item Dipesan",
+                    Icons.shopping_bag_rounded,
+                  ),
                   const SizedBox(height: 12),
                   ...widget.items.map((item) => _buildModernItemRow(item)),
                   const SizedBox(height: 24),
                 ],
 
-                _buildSectionHeader("Rincian Pembayaran", Icons.receipt_long_rounded),
+                _buildSectionHeader(
+                  "Rincian Pembayaran",
+                  Icons.receipt_long_rounded,
+                ),
                 const SizedBox(height: 12),
                 _buildPremiumTotalCard(total),
                 const SizedBox(height: 24),
 
-                _buildSectionHeader("Transfer Bank Resmi", Icons.business_rounded),
+                _buildSectionHeader(
+                  "Transfer Bank Resmi",
+                  Icons.business_rounded,
+                ),
                 const SizedBox(height: 12),
                 _buildPremiumBankCard(),
                 const SizedBox(height: 24),
 
-                _buildSectionHeader("Dokumentasi Bukti", Icons.cloud_done_rounded),
+                _buildSectionHeader(
+                  "Dokumentasi Bukti",
+                  Icons.cloud_done_rounded,
+                ),
                 const SizedBox(height: 12),
                 _buildModernProofSection(isPaid),
               ],
@@ -492,25 +642,36 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isPaid ? [_T.primary, _T.primaryLight] : [const Color(0xFFFF7A45), const Color(0xFFFF9C73)],
+          colors: isPaid
+              ? [_T.primary, _T.primaryLight]
+              : [const Color(0xFFFF7A45), const Color(0xFFFF9C73)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isPaid ? _T.primary : _T.accent).withOpacity(0.25), 
-            blurRadius: 20, 
-            offset: const Offset(0, 8)
-          )
+            color: (isPaid ? _T.primary : _T.accent).withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-            child: Icon(isPaid ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded, color: Colors.white, size: 28),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isPaid
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.info_outline_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -519,12 +680,23 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
               children: [
                 Text(
                   isPaid ? "Pembayaran Tuntas" : "Menunggu Transfer",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.3),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isPaid ? "Tiket Anda sudah siap digunakan" : "Segera upload bukti pembayaran",
-                  style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w500),
+                  isPaid
+                      ? "Tiket Anda sudah siap digunakan"
+                      : "Segera upload bukti pembayaran",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -540,31 +712,54 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _T.bgCard, 
-        borderRadius: BorderRadius.circular(16), 
-        border: Border.all(color: _T.divider.withOpacity(0.5))
+        color: _T.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _T.divider.withOpacity(0.5)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: _T.primarySurface, borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.local_activity_rounded, color: _T.primary, size: 20),
+            decoration: BoxDecoration(
+              color: _T.primarySurface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.local_activity_rounded,
+              color: _T.primary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800, color: _T.textHead, fontSize: 14)),
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: _T.textHead,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text("${item.quantity}x tiket pengunjung", style: const TextStyle(fontSize: 12, color: _T.textBody)),
+                Text(
+                  "${item.quantity}x tiket pengunjung",
+                  style: const TextStyle(fontSize: 12, color: _T.textBody),
+                ),
               ],
             ),
           ),
           Text(
-            _formatRupiah((int.tryParse(item.harga.toString()) ?? 0) * item.quantity),
-            style: const TextStyle(fontWeight: FontWeight.w800, color: _T.primaryDark, fontSize: 14),
+            _formatRupiah(
+              (int.tryParse(item.harga.toString()) ?? 0) * item.quantity,
+            ),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: _T.primaryDark,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -576,9 +771,9 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _T.primarySurface.withOpacity(0.5), 
-        borderRadius: BorderRadius.circular(20), 
-        border: Border.all(color: _T.primary.withOpacity(0.15))
+        color: _T.primarySurface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _T.primary.withOpacity(0.15)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -586,14 +781,28 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
           const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Total Tagihan", style: TextStyle(fontSize: 12, color: _T.textBody, fontWeight: FontWeight.w600)),
+              Text(
+                "Total Tagihan",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _T.textBody,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               SizedBox(height: 2),
-              Text("Termasuk pajak", style: TextStyle(fontSize: 10, color: _T.textMuted)),
+              Text(
+                "Termasuk pajak",
+                style: TextStyle(fontSize: 10, color: _T.textMuted),
+              ),
             ],
           ),
           Text(
-            _formatRupiah(total), 
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _T.primaryDark)
+            _formatRupiah(total),
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: _T.primaryDark,
+            ),
           ),
         ],
       ),
@@ -605,36 +814,66 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _T.bgCard, 
-        borderRadius: BorderRadius.circular(20), 
+        color: _T.bgCard,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _T.divider),
-        boxShadow: [BoxShadow(color: _T.textHead.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(
+            color: _T.textHead.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: _T.bgPage, borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.account_balance_rounded, color: _T.primary, size: 28),
+            decoration: BoxDecoration(
+              color: _T.bgPage,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.account_balance_rounded,
+              color: _T.primary,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Bank Central Asia (BCA)", style: TextStyle(fontSize: 12, color: _T.textBody)),
-                const SizedBox(height: 4),
                 const Text(
-                  "1234 5678 90", 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _T.textHead, letterSpacing: 2.0)
+                  "Bank Central Asia (BCA)",
+                  style: TextStyle(fontSize: 12, color: _T.textBody),
                 ),
                 const SizedBox(height: 4),
-                Text("a.n. Wisata Indonesia", style: TextStyle(fontSize: 11, color: _T.textMuted.withOpacity(0.8), fontWeight: FontWeight.w600)),
+                const Text(
+                  "1234 5678 90",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: _T.textHead,
+                    letterSpacing: 2.0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "a.n. Wisata Indonesia",
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _T.textMuted.withOpacity(0.8),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
-            onPressed: () { /* Opsi salin jika ada */ },
+            onPressed: () {
+              /* Opsi salin jika ada */
+            },
             icon: const Icon(Icons.copy_rounded, color: _T.primary, size: 20),
             tooltip: "Salin Rekening",
           ),
@@ -648,24 +887,37 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
     return Column(
       children: [
         Container(
-          height: 240, width: double.infinity,
+          height: 240,
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: _T.bgCard, 
-            borderRadius: BorderRadius.circular(20), 
+            color: _T.bgCard,
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _T.divider),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(19),
             child: _proofUrlFromBackend != null
                 ? Image.network(
-                    _proofUrlFromBackend!, 
-                    fit: BoxFit.cover, 
-                    loadingBuilder: (c, child, progress) => progress == null ? child : const Center(child: CircularProgressIndicator(color: _T.primary)),
-                    errorBuilder: (c, e, s) => _buildProofPlaceholder("Gagal memuat gambar bukti", Icons.broken_image_rounded)
+                    _proofUrlFromBackend!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (c, child, progress) => progress == null
+                        ? child
+                        : const Center(
+                            child: CircularProgressIndicator(color: _T.primary),
+                          ),
+                    errorBuilder: (c, e, s) => _buildProofPlaceholder(
+                      "Gagal memuat gambar bukti",
+                      Icons.broken_image_rounded,
+                    ),
                   )
-                : (_imageProof != null 
-                    ? Image.file(_imageProof!, fit: BoxFit.cover) 
-                    : _buildProofPlaceholder(isPaid ? "Dokumen Tersimpan" : "Belum ada file diunggah", Icons.image_search_rounded)),
+                : (_imageProof != null
+                      ? Image.file(_imageProof!, fit: BoxFit.cover)
+                      : _buildProofPlaceholder(
+                          isPaid
+                              ? "Dokumen Tersimpan"
+                              : "Belum ada file diunggah",
+                          Icons.image_search_rounded,
+                        )),
           ),
         ),
         if (!isPaid) const SizedBox(height: 16),
@@ -673,18 +925,36 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
           GestureDetector(
             onTap: _pickAndUploadImage,
             child: Container(
-              width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: _T.headerGrad), 
+                gradient: const LinearGradient(colors: _T.headerGrad),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: _T.primary.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 6))],
+                boxShadow: [
+                  BoxShadow(
+                    color: _T.primary.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 20),
+                  Icon(
+                    Icons.cloud_upload_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   SizedBox(width: 8),
-                  Text("Unggah Bukti Transfer", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                  Text(
+                    "Unggah Bukti Transfer",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -700,7 +970,14 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
         children: [
           Icon(icon, color: _T.textMuted.withOpacity(0.5), size: 48),
           const SizedBox(height: 12),
-          Text(text, style: const TextStyle(color: _T.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            text,
+            style: const TextStyle(
+              color: _T.textMuted,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -709,23 +986,57 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
   // ════════════════════════════════════════════════════════
   //  KOMPONEN ARSITEKTURAL GLOBAL
   // ════════════════════════════════════════════════════════
-  
+
   // --- HEADER SLIVER LENGKUNG PREMIUM ---
-  Widget _buildSliverHeader({required IconData icon, required String title, required String subtitle, VoidCallback? onBack}) {
+  Widget _buildSliverHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onBack,
+  }) {
     return SliverToBoxAdapter(
       child: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(colors: _T.headerGrad, begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+          gradient: LinearGradient(
+            colors: _T.headerGrad,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(32),
+            bottomRight: Radius.circular(32),
+          ),
         ),
         child: SafeArea(
           bottom: false,
           child: Stack(
             children: [
               // Efek dekorasi lingkaran latar belakang abstrak
-              Positioned(top: -40, right: -30, child: Container(width: 140, height: 140, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.08)))),
-              Positioned(top: 30, right: 80, child: Container(width: 60, height: 60, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.05)))),
-              
+              Positioned(
+                top: -40,
+                right: -30,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 30,
+                right: 80,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
                 child: Column(
@@ -733,9 +1044,16 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                   children: [
                     if (onBack != null) ...[
                       IconButton(
-                        onPressed: onBack, 
-                        style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.2), padding: const EdgeInsets.all(10)),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18)
+                        onPressed: onBack,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          padding: const EdgeInsets.all(10),
+                        ),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -743,7 +1061,10 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Icon(icon, color: Colors.white, size: 24),
                         ),
                         const SizedBox(width: 14),
@@ -751,9 +1072,23 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(title, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
                               const SizedBox(height: 2),
-                              Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12)),
+                              Text(
+                                subtitle,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.85),
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -771,13 +1106,23 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
 
   // --- FLOATING BOTTOM NAVIGATION BAR ---
   Widget? _buildBottomBar() {
-    if (_isBookingCreated || (widget.items.isEmpty && !_isBookingCreated)) return null;
+    if (_isBookingCreated || (widget.items.isEmpty && !_isBookingCreated))
+      return null;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white, 
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
-        boxShadow: [BoxShadow(color: _T.textHead.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _T.textHead.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: SafeArea(
         child: Row(
@@ -787,27 +1132,57 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Total Tagihan", style: TextStyle(fontSize: 11, color: _T.textMuted, fontWeight: FontWeight.w600)),
-                  Text(_formatRupiah(widget.totalHarga), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _T.primaryDark)),
+                  const Text(
+                    "Total Tagihan",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _T.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    _formatRupiah(widget.totalHarga),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: _T.primaryDark,
+                    ),
+                  ),
                 ],
               ),
             ),
             ElevatedButton(
-              onPressed: _handleCreateBooking, 
+              onPressed: _handleCreateBooking,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _T.primary, 
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                backgroundColor: _T.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 4,
                 shadowColor: _T.primary.withOpacity(0.4),
-              ), 
+              ),
               child: const Row(
                 children: [
-                  Text("Buat Pesanan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                  Text(
+                    "Buat Pesanan",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
                   SizedBox(width: 8),
-                  Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ],
-              )
+              ),
             ),
           ],
         ),
@@ -821,66 +1196,123 @@ class _BookingPageState extends State<BookingPage> with TickerProviderStateMixin
       children: [
         Icon(icon, color: _T.primary, size: 18),
         const SizedBox(width: 8),
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w800, color: _T.textHead, fontSize: 15)),
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: _T.textHead,
+            fontSize: 15,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildEmptyState() {
     return SizedBox(
-      height: 350, 
+      height: 350,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: _T.divider.withOpacity(0.4), shape: BoxShape.circle),
-              child: const Icon(Icons.receipt_long_rounded, color: _T.textMuted, size: 48),
+              decoration: BoxDecoration(
+                color: _T.divider.withOpacity(0.4),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.receipt_long_rounded,
+                color: _T.textMuted,
+                size: 48,
+              ),
             ),
             const SizedBox(height: 16),
-            const Text("Belum Ada Transaksi", style: TextStyle(fontWeight: FontWeight.w800, color: _T.textHead, fontSize: 16)),
+            const Text(
+              "Belum Ada Transaksi",
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: _T.textHead,
+                fontSize: 16,
+              ),
+            ),
             const SizedBox(height: 4),
-            const Text("Tiket pesanan Anda akan muncul di sini", style: TextStyle(color: _T.textBody, fontSize: 13)),
+            const Text(
+              "Tiket pesanan Anda akan muncul di sini",
+              style: TextStyle(color: _T.textBody, fontSize: 13),
+            ),
           ],
-        )
-      )
+        ),
+      ),
     );
   }
 
   void _showSuksesSheet() {
     showModalBottomSheet(
-      context: context, 
+      context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        padding: const EdgeInsets.all(32), 
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+        padding: const EdgeInsets.all(32),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
         child: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min, 
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: _T.green.withOpacity(0.15), shape: BoxShape.circle),
-                child: Icon(Icons.cloud_done_rounded, color: _T.green, size: 48),
+                decoration: BoxDecoration(
+                  color: _T.green.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.cloud_done_rounded,
+                  color: _T.green,
+                  size: 48,
+                ),
               ),
               const SizedBox(height: 20),
-              const Text("Bukti Berhasil Terkirim!", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _T.textHead)),
+              const Text(
+                "Bukti Berhasil Terkirim!",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: _T.textHead,
+                ),
+              ),
               const SizedBox(height: 8),
-              const Text("Admin akan melakukan verifikasi pembayaran Anda sesegera mungkin.", textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: _T.textBody)),
+              const Text(
+                "Admin akan melakukan verifikasi pembayaran Anda sesegera mungkin.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: _T.textBody),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context), 
-                  style: ElevatedButton.styleFrom(backgroundColor: _T.primary, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                  child: const Text("Selesai & Kembali", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _T.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    "Selesai & Kembali",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
-              )
-            ]
+              ),
+            ],
           ),
-        )
-      )
+        ),
+      ),
     );
   }
 }

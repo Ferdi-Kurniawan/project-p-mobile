@@ -6,7 +6,6 @@ import 'login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.userData});
-
   final Map<String, dynamic> userData;
 
   @override
@@ -21,28 +20,28 @@ class _ProfilePageState extends State<ProfilePage>
   bool _editingPhone = false;
   bool _editingPassword = false;
 
+  // Variabel untuk menampung nama dari session
+  String _fullname = '';
+
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
   late final TextEditingController _passwordController;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
-  // ─── Palette: selaras dengan halaman Tiket & LoginPage ────────────────────
-  static const Color teal500  = Color(0xFF319795); // sama dengan tealDeep di LoginPage
-  static const Color teal400  = Color(0xFF4DB6AC);
-  static const Color teal100  = Color(0xFFB2DFDB);
-  static const Color charcoal = Color(0xFF2D3748); // sama dengan charcoalGrey di LoginPage
-  static const Color white    = Color(0xFFFFFFFF);
-
-  // ─── Foto wisata Indonesia dari Unsplash ──────────────────────────────────
-  // Raja Ampat, Papua Barat
-  static const String _bgImageUrl =
-      'https://images.unsplash.com/photo-1516690561799-46d8f74f9abf'
-      '?q=85&w=1600&auto=format&fit=crop';
+  static const Color teal500 = Color(0xFF319795);
+  static const Color teal400 = Color(0xFF4DB6AC);
+  static const Color teal100 = Color(0xFFB2DFDB);
+  static const Color charcoal = Color(0xFF2D3748);
+  static const Color white = Color(0xFFFFFFFF);
 
   @override
   void initState() {
     super.initState();
+
+    // Memuat data nama dari session SharedPreferences
+    _loadSessionData();
+
     _emailController = TextEditingController(
       text: widget.userData['email'] ?? 'penjelajah@email.com',
     );
@@ -55,11 +54,18 @@ class _ProfilePageState extends State<ProfilePage>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+  }
 
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
+  // Fungsi untuk mengambil nama lengkap dari SharedPreferences
+  Future<void> _loadSessionData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _fullname =
+          prefs.getString('fullname') ??
+          widget.userData['fullname'] ??
+          'Penjelajah';
+    });
   }
 
   @override
@@ -71,7 +77,6 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  // ─── Logout: hapus SharedPreferences → navigasi ke LoginPage asli ─────────
   void _handleLogout() {
     showDialog(
       context: context,
@@ -89,17 +94,12 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         content: const Text(
           'Kamu perlu login kembali untuk mengakses fitur premium.',
-          style: TextStyle(
-            fontSize: 13,
-            color: Color(0xFF6B7E8D),
-            height: 1.5,
-          ),
+          style: TextStyle(fontSize: 13, color: Color(0xFF6B7E8D), height: 1.5),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           Row(
             children: [
-              // Tombol Batal
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(ctx),
@@ -107,7 +107,8 @@ class _ProfilePageState extends State<ProfilePage>
                     foregroundColor: const Color(0xFF6B7E8D),
                     side: const BorderSide(color: Color(0xFFCDD7DE)),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
                   child: const Text(
@@ -117,19 +118,15 @@ class _ProfilePageState extends State<ProfilePage>
                 ),
               ),
               const SizedBox(width: 10),
-              // Tombol Keluar
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    Navigator.pop(ctx); // tutup dialog
-
+                    Navigator.pop(ctx);
                     await ApiService.logout();
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.clear();
 
                     if (!mounted) return;
-
-                    // Navigasi ke LoginPage asli, hapus seluruh stack
                     Navigator.pushAndRemoveUntil(
                       context,
                       PageRouteBuilder(
@@ -138,7 +135,7 @@ class _ProfilePageState extends State<ProfilePage>
                             FadeTransition(opacity: anim, child: child),
                         transitionDuration: const Duration(milliseconds: 500),
                       ),
-                      (route) => false, // hapus semua route sebelumnya
+                      (route) => false,
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -146,7 +143,8 @@ class _ProfilePageState extends State<ProfilePage>
                     foregroundColor: white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
                   child: const Text(
@@ -164,7 +162,8 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
-    final String fullname = widget.userData['fullname'] ?? 'Penjelajah';
+    // Menggunakan nama yang sudah dimuat dari session
+    final String displayFullname = _fullname.isEmpty ? 'Memuat...' : _fullname;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
@@ -173,7 +172,7 @@ class _ProfilePageState extends State<ProfilePage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileHero(fullname),
+            _buildProfileHero(displayFullname),
             const SizedBox(height: 24),
 
             _buildSectionHeader("Aktivitas"),
@@ -256,7 +255,9 @@ class _ProfilePageState extends State<ProfilePage>
             color: Colors.white.withOpacity(0.15),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-                color: Colors.white.withOpacity(0.25), width: 1.2),
+              color: Colors.white.withOpacity(0.25),
+              width: 1.2,
+            ),
           ),
           child: Column(
             children: [
@@ -272,8 +273,11 @@ class _ProfilePageState extends State<ProfilePage>
                       border: Border.all(color: teal400, width: 2.5),
                     ),
                     child: const Center(
-                      child: Icon(Icons.person_outline_rounded,
-                          size: 42, color: Colors.white),
+                      child: Icon(
+                        Icons.person_outline_rounded,
+                        size: 42,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   Container(
@@ -284,8 +288,11 @@ class _ProfilePageState extends State<ProfilePage>
                       shape: BoxShape.circle,
                       border: Border.all(color: white, width: 2),
                     ),
-                    child: const Icon(Icons.edit_rounded,
-                        size: 12, color: Colors.white),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -300,26 +307,7 @@ class _ProfilePageState extends State<ProfilePage>
                   shadows: [Shadow(color: Colors.black38, blurRadius: 6)],
                 ),
               ),
-              const SizedBox(height: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                decoration: BoxDecoration(
-                  color: teal500.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(30),
-                  border:
-                      Border.all(color: teal400.withOpacity(0.5), width: 1),
-                ),
-                child: const Text(
-                  'PREMIUM TRAVELER',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ),
+              // Bagian Premium Traveler telah dihilangkan agar desain lebih bersih
             ],
           ),
         ),
@@ -342,19 +330,16 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // ── Riwayat Booking ──
   void _showBookingHistory() async {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
-
     final bookings = await ApiService.getBookings();
-    if (mounted) Navigator.pop(context); // tutup loading
+    if (mounted) Navigator.pop(context);
 
     if (!mounted) return;
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -377,11 +362,14 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ),
             const SizedBox(height: 16),
-            const Text("Riwayat Tiket",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1A1A1A))),
+            const Text(
+              "Riwayat Tiket",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1A1A1A),
+              ),
+            ),
             const SizedBox(height: 16),
             Expanded(
               child: bookings.isEmpty
@@ -389,12 +377,19 @@ class _ProfilePageState extends State<ProfilePage>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.receipt_long_outlined,
-                              size: 64, color: Colors.grey.shade300),
+                          Icon(
+                            Icons.receipt_long_outlined,
+                            size: 64,
+                            color: Colors.grey.shade300,
+                          ),
                           const SizedBox(height: 12),
-                          Text("Belum ada riwayat tiket",
-                              style: TextStyle(
-                                  color: Colors.grey.shade500, fontSize: 14)),
+                          Text(
+                            "Belum ada riwayat tiket",
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 14,
+                            ),
+                          ),
                         ],
                       ),
                     )
@@ -406,7 +401,6 @@ class _ProfilePageState extends State<ProfilePage>
                         final total = b['total_price'] ?? 0;
                         final code = b['ticket_code'] ?? '-';
                         final date = b['createdAt'] ?? '';
-
                         Color statusColor;
                         switch (status) {
                           case 'PAID':
@@ -418,6 +412,7 @@ class _ProfilePageState extends State<ProfilePage>
                             break;
                           default:
                             statusColor = Colors.orange;
+                            break;
                         }
 
                         return Container(
@@ -426,8 +421,7 @@ class _ProfilePageState extends State<ProfilePage>
                           decoration: BoxDecoration(
                             color: Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(16),
-                            border:
-                                Border.all(color: Colors.grey.shade200),
+                            border: Border.all(color: Colors.grey.shade200),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,41 +430,51 @@ class _ProfilePageState extends State<ProfilePage>
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(code,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 14,
-                                          letterSpacing: 1)),
+                                  Text(
+                                    code,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          statusColor.withOpacity(0.1),
-                                      borderRadius:
-                                          BorderRadius.circular(8),
+                                      horizontal: 10,
+                                      vertical: 4,
                                     ),
-                                    child: Text(status,
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: statusColor)),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: statusColor,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                  "Total: Rp ${_formatRp(total)}",
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade700)),
+                                "Total: Rp ${_formatRp(total)}",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
                               if (date.isNotEmpty)
                                 Text(
-                                    "Tanggal: ${date.substring(0, 10)}",
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade500)),
+                                  "Tanggal: ${date.substring(0, 10)}",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
                             ],
                           ),
                         );
@@ -535,7 +539,10 @@ class _ProfilePageState extends State<ProfilePage>
           ],
         ),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
           leading: Container(
             width: 42,
             height: 42,
@@ -545,113 +552,17 @@ class _ProfilePageState extends State<ProfilePage>
             ),
             child: Icon(icon, color: color),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-          subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
-          trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black26),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEditableField({
-    required IconData icon,
-    required String label,
-    required TextEditingController controller,
-    required bool isEditing,
-    required VoidCallback onEditTap,
-    bool isObscured = false,
-  }) {
-    return _glassCard(
-      isActive: isEditing,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: isEditing
-                    ? teal500.withOpacity(0.35)
-                    : Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon,
-                  size: 17,
-                  color: isEditing ? teal100 : Colors.white70),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: isEditing ? teal100 : Colors.white60,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  isEditing
-                      ? TextField(
-                          controller: controller,
-                          obscureText: isObscured,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                          cursorColor: teal400,
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                            border: InputBorder.none,
-                          ),
-                          autofocus: true,
-                        )
-                      : Text(
-                          isObscured ? '••••••••' : controller.text,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: onEditTap,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isEditing
-                      ? teal500
-                      : Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isEditing
-                        ? teal500
-                        : Colors.white.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  isEditing ? 'Simpan' : 'Edit',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          ),
+          subtitle: subtitle != null
+              ? Text(subtitle, style: const TextStyle(fontSize: 12))
+              : null,
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.black26,
+          ),
         ),
       ),
     );
@@ -683,14 +594,18 @@ class _ProfilePageState extends State<ProfilePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.white60)),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: Colors.white60),
+                  ),
                 ],
               ),
             ),
@@ -703,125 +618,6 @@ class _ProfilePageState extends State<ProfilePage>
               inactiveTrackColor: Colors.white24,
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavCard({
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: _glassCard(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 17, color: Colors.white70),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
-                    Text(subtitle,
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.white60)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white38, size: 22),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: () {
-          setState(() {
-            _editingEmail = false;
-            _editingPhone = false;
-            _editingPassword = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Perubahan berhasil disimpan'),
-              backgroundColor: teal500,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: teal500,
-          foregroundColor: white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-        ),
-        child: const Text(
-          'SIMPAN PERUBAHAN',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
-            letterSpacing: 2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: OutlinedButton(
-            onPressed: _handleLogout, // ← dialog → hapus prefs → LoginPage
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.white.withOpacity(0.12),
-              side: BorderSide(
-                  color: Colors.white.withOpacity(0.35), width: 1.5),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text(
-              'KELUAR',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 14,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
         ),
       ),
     );
