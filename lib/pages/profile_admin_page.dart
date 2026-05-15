@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart'; // Pastikan path ini sesuai
+import 'login_page.dart'; // Pastikan path ini sesuai
 
 class ProfileAdminPage extends StatelessWidget {
   const ProfileAdminPage({super.key});
@@ -10,7 +13,6 @@ class ProfileAdminPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Admin Dashboard"),
         backgroundColor: Colors.deepOrange,
-        elevation: 0,
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -19,14 +21,12 @@ class ProfileAdminPage extends StatelessWidget {
             _buildHeader(),
             const SizedBox(height: 20),
             _buildMenu(context),
-            const SizedBox(height: 20), // Padding bawah agar tidak terlalu mepet
           ],
         ),
       ),
     );
   }
 
-  // ================= HEADER =================
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -38,13 +38,9 @@ class ProfileAdminPage extends StatelessWidget {
           bottomRight: Radius.circular(30),
         ),
       ),
-      child: Column(
-        children: const [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.white24,
-            child: Icon(Icons.person, size: 60, color: Colors.white),
-          ),
+      child: const Column(
+        children: [
+          CircleAvatar(radius: 50, child: Icon(Icons.person, size: 60)),
           SizedBox(height: 10),
           Text(
             "Admin Wisata",
@@ -54,82 +50,105 @@ class ProfileAdminPage extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Text(
-            "admin@wisata.com",
-            style: TextStyle(color: Colors.white70),
-          ),
+          Text("admin@wisata.com", style: TextStyle(color: Colors.white70)),
         ],
       ),
     );
   }
 
-  // ================= MENU UTAMA =================
   Widget _buildMenu(BuildContext context) {
     return Column(
       children: [
-        // SEKSI: MANAJEMEN DATA
         _sectionTitle("Manajemen Konten"),
+
         _menuItem(Icons.category, "Kelola Kategori", () {
-           Navigator.push(context, MaterialPageRoute(builder: (context) => const KategoriPage()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const KategoriPage()),
+          );
         }),
-        _menuItem(Icons.inventory, "Kelola Produk / Paket", () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const ProdukPage()));
+
+        _menuItem(Icons.inventory, "Kelola Paket", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProdukPage()),
+          );
         }),
-        
-        const Divider(height: 30, indent: 20, endIndent: 20),
-        
-        // SEKSI: DATA PENGGUNA & TRANSAKSI
+
+        const Divider(),
+
         _sectionTitle("Administrasi"),
+
         _menuItem(Icons.people, "Data User", () {
-           Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPage()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const UserPage()),
+          );
         }),
+
         _menuItem(Icons.receipt_long, "Data Transaksi", () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const TransaksiPage()));
-        }),
-        _menuItem(Icons.account_circle, "Data Profile Saya", () {
-           Navigator.push(context, MaterialPageRoute(builder: (context) => const DetailProfilePage()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TransaksiPage()),
+          );
         }),
 
-        const Divider(height: 30, indent: 20, endIndent: 20),
+        _menuItem(Icons.person, "Profil Saya", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DetailProfilePage()),
+          );
+        }),
 
-        // SEKSI: SISTEM
+        const Divider(),
+        _menuItem(Icons.logout, "Keluar", () {
+          _logout(context);
+        }, isLogout: true),
+
         _sectionTitle("Sistem"),
-        _menuItem(Icons.settings, "Pengaturan App", () {}),
-        _menuItem(Icons.logout, "Keluar", () {}, isLogout: true),
+
+        _menuItem(Icons.settings, "Pengaturan", () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PengaturanPage()),
+          );
+        }),
+
+        const SizedBox(height: 20),
       ],
     );
   }
 
   Widget _sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+      padding: const EdgeInsets.all(15),
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text(
           title,
-          style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold, fontSize: 14),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
         ),
       ),
     );
   }
 
-  // ================= MENU ITEM COMPONENT =================
-  Widget _menuItem(IconData icon, String title, VoidCallback onTap, {bool isLogout = false}) {
+  Widget _menuItem(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    bool isLogout = false,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
-          ],
         ),
         child: Row(
           children: [
@@ -138,281 +157,213 @@ class ProfileAdminPage extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: isLogout ? Colors.red : Colors.black87,
-                ),
+                style: TextStyle(color: isLogout ? Colors.red : Colors.black),
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400])
+            const Icon(Icons.arrow_forward_ios, size: 15),
           ],
         ),
       ),
     );
   }
-}
 
-// --- HALAMAN-HALAMAN BARU ---
+  // 👇 FUNGSI LOGOUT FULL (HAPUS SESI & PINDAH HALAMAN) 👇
+  void _logout(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Keluar dari Admin?',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        content: const Text(
+          'Sesi admin Anda akan berakhir dan Anda harus login kembali.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // Tutup dialognya dulu
 
-class KategoriPage extends StatelessWidget {
-  const KategoriPage({super.key});
+              // 1. Logout dari server backend
+              await ApiService.logout();
 
-  @override
-  Widget build(BuildContext context) {
+              // 2. Bersihkan semua memori session (role, email, nama, dll dihapus)
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
 
-    final List<Map<String, dynamic>> kategori = [
+              if (!context.mounted) return;
 
-      {
-        "nama": "Wisata Alam",
-        "icon": Icons.forest,
-        "wisata": [
-          {
-            "nama": "Kebun Raya Liwa",
-            "lokasi": "Lampung Barat",
-          },
-        ]
-      },
-
-      {
-        "nama": "Wisata Hiburan",
-        "icon": Icons.park,
-        "wisata": [
-          {
-            "nama": "Lembah Hijau",
-            "lokasi": "Bandar Lampung",
-          },
-        ]
-      },
-
-      {
-        "nama": "Wisata Pantai",
-        "icon": Icons.beach_access,
-        "wisata": [
-          {
-            "nama": "Pantai Pahawang",
-            "lokasi": "Pesawaran",
-          },
-        ]
-      },
-
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Kelola Kategori"),
-        backgroundColor: Colors.deepOrange,
-      ),
-
-      body: ListView.builder(
-        itemCount: kategori.length,
-
-        itemBuilder: (context, index) {
-
-          final item = kategori[index];
-
-          return Card(
-            margin: const EdgeInsets.all(10),
-
-            child: ExpansionTile(
-
-              leading: Icon(
-                item['icon'],
-                color: Colors.deepOrange,
+              // 3. Lempar paksa ke halaman login dan babat habis riwayat halaman (gak bisa di-back)
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
-
-              title: Text(
-                item['nama'],
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              children: [
-
-                ...(item['wisata'] as List).map((wisata) {
-
-                  return ListTile(
-
-                    leading: const Icon(
-                      Icons.place,
-                      color: Colors.orange,
-                    ),
-
-                    title: Text(wisata['nama']),
-
-                    subtitle: Text(wisata['lokasi']),
-
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                    ),
-
-                    onTap: () {
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-
-                        SnackBar(
-                          content: Text(
-                            "Membuka ${wisata['nama']}",
-                          ),
-                        ),
-
-                      );
-
-                    },
-                  );
-
-                }).toList(),
-
-              ],
             ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class UserPage extends StatelessWidget {
-  const UserPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Data User"), backgroundColor: Colors.deepOrange),
-      body: ListView(
-        children: const [
-          ListTile(leading: CircleAvatar(child: Text("B")), title: Text("Budi Santoso"), subtitle: Text("Customer")),
-          ListTile(leading: CircleAvatar(child: Text("S")), title: Text("Siti Aminah"), subtitle: Text("Customer")),
+            child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
   }
 }
 
-class DetailProfilePage extends StatelessWidget {
-  const DetailProfilePage({super.key});
+// =====================================================================
+// HALAMAN-HALAMAN DUMMY DI BAWAHNYA (TETAP SAMA)
+// =====================================================================
+
+// HALAMAN KATEGORI
+class KategoriPage extends StatelessWidget {
+  const KategoriPage({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Profil Admin"), backgroundColor: Colors.deepOrange),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Center(child: CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50))),
-            const SizedBox(height: 20),
-            const Card(
-              child: Column(
-                children: [
-                  ListTile(title: Text("Nama"), subtitle: Text("Admin Wisata")),
-                  ListTile(title: Text("Email"), subtitle: Text("admin@wisata.com")),
-                  ListTile(title: Text("Role"), subtitle: Text("Super Admin")),
-                ],
-              ),
-            )
-          ],
-        ),
+      appBar: AppBar(
+        title: const Text("Kategori"),
+        backgroundColor: Colors.deepOrange,
+      ),
+      body: ListView(
+        children: const [
+          ListTile(
+            leading: Icon(Icons.forest),
+            title: Text("Wisata Alam"),
+            subtitle: Text("Kebun Raya Liwa"),
+          ),
+          ListTile(
+            leading: Icon(Icons.beach_access),
+            title: Text("Wisata Pantai"),
+            subtitle: Text("Pantai Pahawang"),
+          ),
+        ],
       ),
     );
   }
 }
 
-// Halaman Produk & Transaksi tetap sama seperti kode Anda sebelumnya...
-// Halaman Produk & Transaksi
+// HALAMAN PRODUK
 class ProdukPage extends StatelessWidget {
   const ProdukPage({super.key});
-
   @override
   Widget build(BuildContext context) {
-
-    final List<Map<String, String>> paketWisata = [
-      {
-        "nama": "Kebun Raya Liwa",
-        "harga": "Rp 20.000",
-      },
-      {
-        "nama": "Lembah Hijau",
-        "harga": "Rp 25.000",
-      },
-      {
-        "nama": "Pantai Pahawang",
-        "harga": "Rp 30.000",
-      },
-    ];
-
+    List data = ["Kebun Raya Liwa", "Lembah Hijau", "Pantai Pahawang"];
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Kelola Paket Wisata"),
+        title: const Text("Paket Wisata"),
         backgroundColor: Colors.deepOrange,
       ),
-
       body: ListView.builder(
-        itemCount: paketWisata.length,
-
-        itemBuilder: (context, index) {
-
-          final wisata = paketWisata[index];
-
-          return Card(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-
-            child: ListTile(
-
-              leading: const Icon(
-                Icons.place,
-                color: Colors.deepOrange,
-              ),
-
-              title: Text(
-                wisata['nama']!,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              subtitle: Text(
-                wisata['harga']!,
-              ),
-
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-              ),
-
-              onTap: () {
-
-                ScaffoldMessenger.of(context).showSnackBar(
-
-                  SnackBar(
-                    content: Text(
-                      "Membuka ${wisata['nama']}",
-                    ),
-                  ),
-
-                );
-
-              },
-            ),
+        itemCount: data.length,
+        itemBuilder: (c, i) {
+          return ListTile(
+            leading: const Icon(Icons.place),
+            title: Text(data[i]),
           );
         },
       ),
     );
   }
 }
+
+// USER
+class UserPage extends StatelessWidget {
+  const UserPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Data User")),
+      body: ListView(
+        children: const [
+          ListTile(
+            leading: CircleAvatar(child: Text("B")),
+            title: Text("Budi"),
+          ),
+          ListTile(
+            leading: CircleAvatar(child: Text("S")),
+            title: Text("Siti"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// TRANSAKSI
 class TransaksiPage extends StatelessWidget {
   const TransaksiPage({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Data Transaksi"), backgroundColor: Colors.deepOrange),
+      appBar: AppBar(title: const Text("Transaksi")),
       body: ListView(
         children: const [
-          ListTile(leading: Icon(Icons.receipt), title: Text("User A"), subtitle: Text("Pesan tiket Desa A"), trailing: Text("Selesai")),
-          ListTile(leading: Icon(Icons.receipt), title: Text("User B"), subtitle: Text("Pesan tiket Desa B"), trailing: Text("Pending")),
+          ListTile(
+            leading: Icon(Icons.receipt),
+            title: Text("User A"),
+            subtitle: Text("Selesai"),
+          ),
+          ListTile(
+            leading: Icon(Icons.receipt),
+            title: Text("User B"),
+            subtitle: Text("Pending"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// PROFIL
+class DetailProfilePage extends StatelessWidget {
+  const DetailProfilePage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Profil")),
+      body: const Center(
+        child: Text(
+          "Admin Wisata\nadmin@wisata.com",
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+}
+
+// PENGATURAN
+class PengaturanPage extends StatelessWidget {
+  const PengaturanPage({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Pengaturan"),
+        backgroundColor: Colors.deepOrange,
+      ),
+      body: ListView(
+        children: const [
+          SwitchListTile(
+            value: true,
+            onChanged: null,
+            title: Text("Mode Gelap"),
+          ),
+          ListTile(
+            leading: Icon(Icons.info),
+            title: Text("Versi App"),
+            subtitle: Text("1.0.0"),
+          ),
         ],
       ),
     );
