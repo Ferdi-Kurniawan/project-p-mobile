@@ -7,7 +7,7 @@ const createCategory = async (req, res) => {
     const category = await categoriesRepository.addCategory(name)
 
     res.status(200).json({ status:"success", message: "category berhasil di buat", data: {
-        category
+        category : category
     } })
     } catch (error) {
         console.error(error);
@@ -23,7 +23,7 @@ const getCategories = async (req, res) => {
             return res.status(404).json({ message: "category belum tersedia" });
         }
 
-        res.status(200).json({ data: { categories } })
+        res.status(200).json({ data: { categories: categories } })
         
     } catch (error) {
         console.error(error);
@@ -66,7 +66,7 @@ const updateCategory = async (req, res) => {
     const category = await categoriesRepository.updateCategory(id, name)
 
     res.status(200).json({ status: "success", message: "data berhasil di update", data: {
-        category: category.id
+        category: category
     } })
 
     } catch (error) {

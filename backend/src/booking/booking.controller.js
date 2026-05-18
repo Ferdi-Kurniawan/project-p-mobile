@@ -52,7 +52,7 @@ const createBooking = async (req, res) => {
 
     return res.status(201).json({
       message: "Booking berhasil dibuat",
-      data: result,
+      data: { booking: result },
     });
   } catch (error) {
     if (error.message && error.message.includes("INSUFFICIENT_STOCK")) {
@@ -82,7 +82,7 @@ const getBookings = async (req, res) => {
     const bookings = await bookingRepository.getBookingsByUserId(userId);
     return res.status(200).json({
       data: {
-        bookings,
+        booking: bookings,
       },
     });
   } catch (error) {
@@ -104,7 +104,7 @@ const getBookingById = async (req, res) => {
 
     return res.status(200).json({
       data: {
-        booking,
+        booking: booking,
       },
     });
   } catch (error) {
@@ -120,7 +120,7 @@ const getHistoryBookings = async (req, res) => {
     const bookings = await bookingRepository.getHistoryBookings();
     return res.status(200).json({
       data: {
-        bookings,
+        booking: bookings,
       },
     });
   } catch (error) {
@@ -142,7 +142,7 @@ const getHistoryBookingById = async (req, res) => {
 
     return res.status(200).json({
       data: {
-        booking,
+        booking: booking,
       },
     });
   } catch (error) {

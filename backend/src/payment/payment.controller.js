@@ -2,6 +2,7 @@ import PaymentRepository from "./payment.repository.js";
 import bookingRepository from "../booking/booking.repository.js";
 import qrcode from "qrcode";
 import { sendEmail } from "../config/nodemailer.js";
+
 const updatePayment = async (req, res, next) => {
   try {
     // 1. TAMBAHKAN VALIDASI INI PALING ATAS
@@ -40,7 +41,7 @@ const updatePayment = async (req, res, next) => {
       status: "success",
       message:
         "Pembayaran berhasil dikonfirmasi dan status menjadi PENDING_VERIFICATION.",
-      data: booking,
+      data: { booking: booking },
     });
   } catch (error) {
     // Tangani error khusus dari Prisma jika data tidak ditemukan / bukan milik user
@@ -145,6 +146,7 @@ const verifyPaymentAdmin = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Pembayaran berhasil diverifikasi dan email telah dikirim.",
+      data : { booking : booking }
     });
   } catch (error) {
     return res.status(500).json({ status: "fail", error: error.message });

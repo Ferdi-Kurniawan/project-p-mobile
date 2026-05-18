@@ -38,7 +38,11 @@ class UserRepository {
   }
 
   async findAll() {
-    return await this._prisma.user.findMany();
+    return await this._prisma.user.findMany({
+      include: {
+        bookings: true
+      }
+    });
   }
 
   async findById(id) {

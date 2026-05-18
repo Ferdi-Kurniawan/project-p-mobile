@@ -32,7 +32,7 @@ const createUser = async (req, res) => {
     res.status(201).json({
       status: "success",
       message: "User berhasil dibuat",
-      data: { users },
+      data: { users: users },
     });
   } catch (error) {
     console.log(error);
@@ -148,11 +148,13 @@ const getProfile = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       data: {
-        id: user.id,
-        fullname: user.fullname,
-        phone: user.phone,
-        email: user.email,
-        role: user.role,
+        user: {
+          id: user.id,
+          fullname: user.fullname,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+        },
       },
     });
   } catch (error) {
@@ -165,54 +167,59 @@ const getProfile = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
   const userId = req.session.user.id;
+
   const { fullname, phone, email } = req.body;
 
   try {
-    const currentUser = await UserRepository.getUserById(userId);
-
-    if (!currentUser) {
-      return res.status(404).json({
+    if (!fullname && !phone && !email) {
+      return res.status(400).json({
         status: "fail",
-        error: "User tidak ditemukan.",
+        error: "Tidak ada data yang dikirimkan untuk diperbarui.",
       });
     }
 
-    if (email !== currentUser.email) {
-      const emailExists = await UserRepository.getUserByEmail(email);
-
-      if (emailExists) {
-        return res.status(409).json({
-          status: "fail",
-          error: "Email sudah terdaftar. Silakan gunakan email lain.",
-        });
-      }
+    const currentUser = await UserRepository.getUserById(userId);
+    if (!currentUser) {
+      return res
+        .status(404)
+        .json({ status: "fail", error: "User tidak ditemukan." });
     }
 
-    const updatedUser = await UserRepository.update(userId, {
-      fullname,
-      phone,
-      email,
-    });
+    const updateData = {};
+
+    if (fullname) updateData.fullname = fullname;
+    if (phone) updateData.phone = phone;
+
+    if (email) {
+      if (email !== currentUser.email) {
+        const emailExists = await UserRepository.findByEmail(email);
+        if (emailExists) {
+          return res.status(409).json({
+            status: "fail",
+            error: "Email sudah terdaftar. Silakan gunakan email lain.",
+          });
+        }
+      }
+      updateData.email = email;
+    }
+
+    const updatedUser = await UserRepository.update(userId, updateData);
 
     return res.status(200).json({
       status: "success",
       message: "Profile berhasil diperbarui.",
       data: {
-        id: updatedUser.id,
-        fullname: updatedUser.fullname,
-        phone: updatedUser.phone,
-        email: updatedUser.email,
-        role: updatedUser.role,
+        user: {
+          id: updatedUser.id,
+          fullname: updatedUser.fullname,
+          phone: updatedUser.phone,
+          email: updatedUser.email,
+          role: updatedUser.role,
+        },
       },
     });
   } catch (error) {
-    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
-      return res.status(409).json({
-        status: "fail",
-        error: "Email sudah digunakan oleh akun lain.",
-      });
-    }
-
+    console.log(error.message);
     res.status(500).json({
       status: "fail",
       error: "Terjadi kesalahan pada server",
@@ -235,10 +242,18 @@ const logoutUser = (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     const users = await UserRepository.findAll();
-    res.status(200).json({ data: users });
+    res.status(200).json({ status: "success", data: { users: users } });
   } catch (error) {
     res.status(500).json({ error: "Gagal mengambil data user" });
   }
 };
 
-export { createUser, loginUser, logoutUser, getAllUsers, changePassword };
+export {
+  createUser,
+  loginUser,
+  logoutUser,
+  getAllUsers,
+  changePassword,
+  getProfile,
+  updateProfile,
+};

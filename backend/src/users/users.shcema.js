@@ -16,7 +16,16 @@ const loginUserSchema = {
   })
 }
 
+const updateProfileSchema = {
+  body:Joi.object({
+    fullname: Joi.string().optional(),
+    phone: Joi.string().optional(),
+    email: Joi.string().email().optional()
+  })
+}
+
 export {
     registerUserSchema,
-    loginUserSchema
+    loginUserSchema,
+    updateProfileSchema
 }

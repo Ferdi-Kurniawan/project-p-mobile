@@ -26,7 +26,7 @@ const createProduct = async (req, res) => {
     return res.status(200).json({
       message: "data berhasil di buat",
       data: {
-        product,
+        product: product
       },
     });
   } catch (error) {
@@ -47,7 +47,7 @@ const getAllProduct = async (req, res) => {
   return res.status(200).json({
     status: "success",
     data: {
-      product,
+      products: product,
     },
   });
 };
@@ -77,7 +77,7 @@ const getProductById = async (req, res) => {
   return res.status(200).json({
     status: "success",
     data: {
-      product,
+      product: product,
     },
   });
 };
@@ -107,7 +107,7 @@ const updateProductById = async (req, res) => {
       });
     }
 
-    await productRepository.updateProductById(productId, category_id, {
+    const product = await productRepository.updateProductById(productId, category_id, {
       name,
       price,
       stock,
@@ -116,6 +116,9 @@ const updateProductById = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "berhasil update product",
+      data : {
+        product: product
+      }
     });
   } catch (error) {
     console.error(error);
@@ -136,7 +139,7 @@ const deleteProductById = async (req, res) => {
       });
     }
 
-    const product = await productRepository.deleteProductById(productId);
+    await productRepository.deleteProductById(productId);
 
     return res.status(200).json({
       status: "success",
