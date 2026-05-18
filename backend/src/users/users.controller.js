@@ -1,6 +1,6 @@
-import UserRepository from './users.repository.js'
-import PasswordHelper from '../helpers/bcrypt.js';
-import setSession from '../helpers/session.js';
+import UserRepository from "./users.repository.js";
+import PasswordHelper from "../helpers/bcrypt.js";
+import setSession from "../helpers/session.js";
 
 const createUser = async (req, res) => {
   try {
@@ -8,13 +8,13 @@ const createUser = async (req, res) => {
 
     // 1. Cek Email apakah sudah ada
     const checkEmail = await UserRepository.findByEmail(email);
-    if(checkEmail) {
+    if (checkEmail) {
       return res.status(409).json({ status: "Email sudah digunakan" });
     }
 
     // 2. Cek Nomor HP apakah sudah ada
     const checkPhone = await UserRepository.findByPhone(phone);
-    if(checkPhone) {
+    if (checkPhone) {
       return res.status(409).json({ status: "Nomor HP sudah terdaftar" });
     }
 
@@ -26,77 +26,219 @@ const createUser = async (req, res) => {
       fullname,
       phone,
       email,
-      password: passwordHash 
+      password: passwordHash,
     });
 
-    res.status(201).json({ 
-      status: 'success',
-      message: 'User berhasil dibuat', 
-      data: { users } 
+    res.status(201).json({
+      status: "success",
+      message: "User berhasil dibuat",
+      data: { users },
     });
-
   } catch (error) {
     console.log(error);
-    res.status(500).json({ status: 'error', message: 'Gagal membuat user' });
+    res.status(500).json({ status: "error", message: "Gagal membuat user" });
   }
 };
 
 const loginUser = async (req, res) => {
   try {
-  const { email, password } = req.body;
-  const user = await UserRepository.findByEmail(email);
+    const { email, password } = req.body;
+    const user = await UserRepository.findByEmail(email);
 
-  if(!user) {
-    return res.status(401).json({ status: 'fail', message: 'Email atau password salah'});
+    if (!user) {
+      return res
+        .status(401)
+        .json({ status: "fail", message: "Email atau password salah" });
+    }
+
+    const isPasswordMatch = await PasswordHelper.comparePassword(
+      password,
+      user.password,
+    );
+
+    if (!isPasswordMatch) {
+      return res
+        .status(401)
+        .json({ status: "fail", message: "Email atau password salah" });
+    }
+
+    await setSession(req, user);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Login berhasil",
+      data: {
+        user: {
+          id: user.id,
+          fullname: user.fullname,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+        },
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Gagal melakukan login" });
   }
+};
 
-  const isPasswordMatch = await PasswordHelper.comparePassword(password, user.password);
+const changePassword = async (req, res, next) => {
+  const userId = req.session.user.id;
 
-  if (!isPasswordMatch) {
-    return res.status(401).json({ status: 'fail', message: 'Email atau password salah' });
+  const { oldPassword, newPassword, confirmNewPassword } = req.body;
+
+  try {
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({
+        status: "fail",
+        error: "Password baru dan konfirmasi password tidak cocok.",
+      });
+    }
+
+    const currentUser = await UserRepository.getUserById(userId);
+    if (!currentUser) {
+      return res.status(404).json({
+        status: "fail",
+        error: "User tidak ditemukan.",
+      });
+    }
+
+    const isOldPasswordValid = await PasswordHelper.comparePassword(
+      oldPassword,
+      currentUser.password,
+    );
+
+    if (!isOldPasswordValid) {
+      return res.status(400).json({
+        status: "fail",
+        error: "Password lama yang Anda masukkan salah.",
+      });
+    }
+
+    const newPasswordHash = await PasswordHelper.hashPassword(newPassword);
+
+    await UserRepository.resetPassword(userId, newPasswordHash);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Password berhasil diperbarui.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      error: error.message,
+    });
   }
+};
 
-  await setSession(req, user);
+const getProfile = async (req, res, next) => {
+  const userId = req.session.user.id;
 
-  return res.status(200).json({
-    status: 'success',
-    message: 'Login berhasil',
-    data: {
-      user: {
+  try {
+    const user = await UserRepository.getUserById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        status: "fail",
+        message: "User tidak ditemukan.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: {
         id: user.id,
         fullname: user.fullname,
         phone: user.phone,
         email: user.email,
-        role: user.role
-      }
-
-    }
-  })
+        role: user.role,
+      },
+    });
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Gagal melakukan login' })
-  } 
+    return res.status(500).json({
+      status: "fail",
+      error: "terjadi kesalahan pada server.",
+    });
+  }
 };
 
+const updateProfile = async (req, res, next) => {
+  const userId = req.session.user.id;
+  const { fullname, phone, email } = req.body;
+
+  try {
+    const currentUser = await UserRepository.getUserById(userId);
+
+    if (!currentUser) {
+      return res.status(404).json({
+        status: "fail",
+        error: "User tidak ditemukan.",
+      });
+    }
+
+    if (email !== currentUser.email) {
+      const emailExists = await UserRepository.getUserByEmail(email);
+
+      if (emailExists) {
+        return res.status(409).json({
+          status: "fail",
+          error: "Email sudah terdaftar. Silakan gunakan email lain.",
+        });
+      }
+    }
+
+    const updatedUser = await UserRepository.update(userId, {
+      fullname,
+      phone,
+      email,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Profile berhasil diperbarui.",
+      data: {
+        id: updatedUser.id,
+        fullname: updatedUser.fullname,
+        phone: updatedUser.phone,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+    });
+  } catch (error) {
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      return res.status(409).json({
+        status: "fail",
+        error: "Email sudah digunakan oleh akun lain.",
+      });
+    }
+
+    res.status(500).json({
+      status: "fail",
+      error: "Terjadi kesalahan pada server",
+    });
+  }
+};
 
 const logoutUser = (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      return res.status(500).json({ status: 'error', message: 'Gagal logout' });
+      return res.status(500).json({ status: "error", message: "Gagal logout" });
     }
-    res.clearCookie('connect.sid'); // Nama cookie default express-session
-    return res.status(200).json({ status: 'success', message: 'Logout berhasil' });
+    res.clearCookie("connect.sid");
+    return res
+      .status(200)
+      .json({ status: "success", message: "Logout berhasil" });
   });
 };
-
 
 const getAllUsers = async (req, res) => {
   try {
     const users = await UserRepository.findAll();
     res.status(200).json({ data: users });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil data user' });
+    res.status(500).json({ error: "Gagal mengambil data user" });
   }
 };
 
-export { createUser, loginUser, logoutUser, getAllUsers };
+export { createUser, loginUser, logoutUser, getAllUsers, changePassword };

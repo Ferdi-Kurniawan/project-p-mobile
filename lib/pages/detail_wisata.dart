@@ -5,17 +5,16 @@ import 'package:flutter/services.dart';
 // ════════════════════════════════════════════════════════
 //  Design Tokens — Teal/Green palette (selaras TiketPage)
 // ════════════════════════════════════════════════════════
-const Color _primary       = Color(0xFF2DC8A8); // teal utama (mirip tiket)
-const Color _primaryDark   = Color(0xFF1AA08A); // teal gelap
-const Color _primaryLight  = Color(0xFF7DE8D4); // teal muda
-const Color _accent        = Color(0xFF00B894); // green-teal accent
-const Color _bgPage        = Color(0xFFF0FBF8); // bg sangat soft teal
-const Color _bgCard        = Color(0xFFFFFFFF);
-const Color _textPrimary   = Color(0xFF0D2B22); // dark greenish
+const Color _primary = Color(0xFF2DC8A8); // teal utama (mirip tiket)
+const Color _primaryDark = Color(0xFF1AA08A); // teal gelap
+const Color _primaryLight = Color(0xFF7DE8D4); // teal muda
+const Color _accent = Color(0xFF00B894); // green-teal accent
+const Color _bgPage = Color(0xFFF0FBF8); // bg sangat soft teal
+const Color _bgCard = Color(0xFFFFFFFF);
+const Color _textPrimary = Color(0xFF0D2B22); // dark greenish
 const Color _textSecondary = Color(0xFF4A7A6E);
-const Color _textMuted     = Color(0xFF9ABDB5);
-const Color _divider       = Color(0xFFD6F0EA);
-const Color _starColor     = Color(0xFFFFC107);
+const Color _textMuted = Color(0xFF9ABDB5);
+const Color _divider = Color(0xFFD6F0EA);
 
 // ════════════════════════════════════════════════════════
 //  Deskripsi lengkap per wisata (sama persis aslinya)
@@ -51,7 +50,7 @@ const Map<String, String> _deskripsiLengkap = {
 String _getDeskripsiLengkap(String name) {
   return _deskripsiLengkap[name] ??
       'Destinasi wisata menakjubkan di Lampung yang menawarkan pengalaman tak terlupakan. '
-      'Nikmati keindahan alam, budaya lokal, dan kehangatan masyarakat setempat dalam setiap kunjungan Anda.';
+          'Nikmati keindahan alam, budaya lokal, dan kehangatan masyarakat setempat dalam setiap kunjungan Anda.';
 }
 
 // ════════════════════════════════════════════════════════
@@ -80,10 +79,14 @@ class _DetailWisataPageState extends State<DetailWisataPage>
   void initState() {
     super.initState();
     _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 700));
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic));
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOutCubic));
     _fadeCtrl.forward();
 
     _scrollCtrl.addListener(() {
@@ -103,14 +106,16 @@ class _DetailWisataPageState extends State<DetailWisataPage>
 
   @override
   Widget build(BuildContext context) {
-    final data      = widget.data;
-    final name      = data['name'] ?? '';
+    final data = widget.data;
+    final name = data['name'] ?? '';
     final deskripsi = _getDeskripsiLengkap(name);
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: _bgPage,
@@ -176,36 +181,39 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                     children: [
                       _glassButton(
                         onTap: () => Navigator.pop(context),
-                        child: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
-                      Row(children: [
-                        _glassButton(
-                          onTap: () =>
-                              setState(() => _isWishlisted = !_isWishlisted),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            transitionBuilder: (child, anim) =>
-                                ScaleTransition(scale: anim, child: child),
-                            child: Icon(
-                              _isWishlisted
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              key: ValueKey(_isWishlisted),
-                              color: _isWishlisted
-                                  ? const Color(0xFFFF6B6B)
-                                  : Colors.white,
-                              size: 20,
+                      Row(
+                        children: [
+                          _glassButton(
+                            onTap: () =>
+                                setState(() => _isWishlisted = !_isWishlisted),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (child, anim) =>
+                                  ScaleTransition(scale: anim, child: child),
+                              child: Icon(
+                                _isWishlisted
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                key: ValueKey(_isWishlisted),
+                                color: _isWishlisted
+                                    ? const Color(0xFFFF6B6B)
+                                    : Colors.white,
+                                size: 20,
+                              ),
                             ),
                           ),
-                        ),
-                      ]),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ),
-
-
             ],
           ),
         ),
@@ -215,125 +223,141 @@ class _DetailWisataPageState extends State<DetailWisataPage>
 
   // ── Hero Background ──────────────────────────────────────
   Widget _buildHeroBackground(Map<String, String> data, String name) {
-    return Stack(fit: StackFit.expand, children: [
-      // Foto hero
-      Image.asset(
-        data['img'] ?? '',
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [_primaryDark, _primary, _primaryLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Foto hero
+        Image.asset(
+          data['img'] ?? '',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_primaryDark, _primary, _primaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-          ),
-          child: const Center(
-            child: Icon(Icons.landscape_rounded,
-                color: Colors.white54, size: 80),
-          ),
-        ),
-      ),
-
-      // Multi-layer gradient — cinematic
-      Positioned.fill(
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x44000000),
-                Color(0x00000000),
-                Color(0x66003D2E),
-                Color(0xEE001F14),
-              ],
-              stops: [0.0, 0.25, 0.65, 1.0],
+            child: const Center(
+              child: Icon(
+                Icons.landscape_rounded,
+                color: Colors.white54,
+                size: 80,
+              ),
             ),
           ),
         ),
-      ),
 
-      // Nama & lokasi di atas foto
-      Positioned(
-        bottom: 28,
-        left: 20,
-        right: 20,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Badge kategori
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: _primary,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
+        // Multi-layer gradient — cinematic
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x44000000),
+                  Color(0x00000000),
+                  Color(0x66003D2E),
+                  Color(0xEE001F14),
+                ],
+                stops: [0.0, 0.25, 0.65, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // Nama & lokasi di atas foto
+        Positioned(
+          bottom: 28,
+          left: 20,
+          right: 20,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Badge kategori
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: _primary,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
                       color: _primary.withOpacity(0.45),
                       blurRadius: 12,
-                      offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Text(
-                data['kategori'] ?? 'Wisata Alam',
-                style: const TextStyle(
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  data['kategori'] ?? 'Wisata Alam',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2),
+                    letterSpacing: 1.2,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            // Nama wisata
-            Text(
-              name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.8,
-                height: 1.1,
-                shadows: [
-                  Shadow(
+              // Nama wisata
+              Text(
+                name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.8,
+                  height: 1.1,
+                  shadows: [
+                    Shadow(
                       color: Colors.black54,
                       blurRadius: 16,
-                      offset: Offset(0, 4)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Lokasi
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Icon(Icons.location_on_rounded,
-                    color: Colors.white, size: 12),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                data['loc'] ?? 'Lampung, Indonesia',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.90),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  shadows: const [
-                    Shadow(color: Colors.black45, blurRadius: 8)
+                      offset: Offset(0, 4),
+                    ),
                   ],
                 ),
               ),
-            ]),
-          ],
+              const SizedBox(height: 8),
+
+              // Lokasi
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.location_on_rounded,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    data['loc'] ?? 'Lampung, Indonesia',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.90),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      shadows: const [
+                        Shadow(color: Colors.black45, blurRadius: 8),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 
   // ── Glassmorphism Info Card (overlap di bawah hero) ──────
@@ -352,16 +376,20 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                 color: Colors.white.withOpacity(0.92),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                    color: _primary.withOpacity(0.18), width: 1.5),
+                  color: _primary.withOpacity(0.18),
+                  width: 1.5,
+                ),
                 boxShadow: [
                   BoxShadow(
-                      color: _primary.withOpacity(0.12),
-                      blurRadius: 30,
-                      offset: const Offset(0, 10)),
+                    color: _primary.withOpacity(0.12),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  ),
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3)),
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
                 ],
               ),
               child: Column(
@@ -372,7 +400,9 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                       // Rating badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFFFC107), Color(0xFFFFE066)],
@@ -382,23 +412,30 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                                color: const Color(0xFFFFC107).withOpacity(0.40),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4)),
+                              color: const Color(0xFFFFC107).withOpacity(0.40),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
                           ],
                         ),
-                        child: Row(children: [
-                          const Icon(Icons.star_rounded,
-                              color: Colors.white, size: 18),
-                          const SizedBox(width: 5),
-                          Text(
-                            data['rating'] ?? '4.9',
-                            style: const TextStyle(
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              data['rating'] ?? '4.9',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
-                                fontWeight: FontWeight.w900),
-                          ),
-                        ]),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(width: 14),
 
@@ -410,17 +447,19 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                             Text(
                               '${data['review'] ?? '2.3k'} Ulasan',
                               style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: _textPrimary),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: _textPrimary,
+                              ),
                             ),
                             const SizedBox(height: 3),
                             Text(
                               'Sangat direkomendasikan',
                               style: const TextStyle(
-                                  fontSize: 12,
-                                  color: _textSecondary,
-                                  fontWeight: FontWeight.w500),
+                                fontSize: 12,
+                                color: _textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
@@ -439,17 +478,20 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                                 : _bgPage,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                                color: _isWishlisted
-                                    ? const Color(0xFFFF6B6B).withOpacity(0.5)
-                                    : _divider,
-                                width: 1.5),
+                              color: _isWishlisted
+                                  ? const Color(0xFFFF6B6B).withOpacity(0.5)
+                                  : _divider,
+                              width: 1.5,
+                            ),
                             boxShadow: _isWishlisted
                                 ? [
                                     BoxShadow(
-                                        color: const Color(0xFFFF6B6B)
-                                            .withOpacity(0.3),
-                                        blurRadius: 14,
-                                        spreadRadius: 2),
+                                      color: const Color(
+                                        0xFFFF6B6B,
+                                      ).withOpacity(0.3),
+                                      blurRadius: 14,
+                                      spreadRadius: 2,
+                                    ),
                                   ]
                                 : [],
                           ),
@@ -485,43 +527,57 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                       // Kategori chip
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: _primary.withOpacity(0.10),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Row(children: [
-                          Icon(Icons.category_rounded,
-                              color: _primary, size: 13),
-                          const SizedBox(width: 5),
-                          Text(
-                            data['kategori'] ?? 'Wisata Alam',
-                            style: const TextStyle(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.category_rounded,
+                              color: _primary,
+                              size: 13,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              data['kategori'] ?? 'Wisata Alam',
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: _primary),
-                          ),
-                        ]),
+                                color: _primary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(width: 10),
 
                       // Lokasi
                       Expanded(
-                        child: Row(children: [
-                          Icon(Icons.location_on_rounded,
-                              color: _accent, size: 14),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              data['loc'] ?? 'Lampung, Indonesia',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_rounded,
+                              color: _accent,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                data['loc'] ?? 'Lampung, Indonesia',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: _textSecondary,
-                                  fontWeight: FontWeight.w500),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
-                          ),
-                        ]),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -574,51 +630,59 @@ class _DetailWisataPageState extends State<DetailWisataPage>
             children: chips.map((chip) {
               return Expanded(
                 child: Container(
-                  margin: EdgeInsets.only(
-                      right: chip == chips.last ? 0 : 10),
+                  margin: EdgeInsets.only(right: chip == chips.last ? 0 : 10),
                   padding: const EdgeInsets.symmetric(
-                      vertical: 14, horizontal: 8),
+                    vertical: 14,
+                    horizontal: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _bgCard,
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: _divider, width: 1),
                     boxShadow: [
                       BoxShadow(
-                          color:
-                              (chip['color'] as Color).withOpacity(0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4)),
+                        color: (chip['color'] as Color).withOpacity(0.08),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
-                  child: Column(children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: (chip['color'] as Color).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: (chip['color'] as Color).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          chip['icon'] as IconData,
+                          color: chip['color'] as Color,
+                          size: 18,
+                        ),
                       ),
-                      child: Icon(chip['icon'] as IconData,
-                          color: chip['color'] as Color, size: 18),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      chip['value'] as String,
-                      style: const TextStyle(
+                      const SizedBox(height: 8),
+                      Text(
+                        chip['value'] as String,
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: _textPrimary,
-                          letterSpacing: -0.2),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      chip['label'] as String,
-                      style: const TextStyle(
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        chip['label'] as String,
+                        style: const TextStyle(
                           fontSize: 10,
                           color: _textSecondary,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ]),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }).toList(),
@@ -645,9 +709,10 @@ class _DetailWisataPageState extends State<DetailWisataPage>
               border: Border.all(color: _divider, width: 1),
               boxShadow: [
                 BoxShadow(
-                    color: _primary.withOpacity(0.07),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6)),
+                  color: _primary.withOpacity(0.07),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
               ],
             ),
             child: Column(
@@ -660,7 +725,8 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                   margin: const EdgeInsets.only(bottom: 14),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                        colors: [_primary, _primaryLight]),
+                      colors: [_primary, _primaryLight],
+                    ),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -672,19 +738,21 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.justify,
                     style: const TextStyle(
-                        fontSize: 13.5,
-                        color: _textSecondary,
-                        height: 1.75,
-                        letterSpacing: 0.1),
+                      fontSize: 13.5,
+                      color: _textSecondary,
+                      height: 1.75,
+                      letterSpacing: 0.1,
+                    ),
                   ),
                   secondChild: Text(
                     deskripsi,
                     textAlign: TextAlign.justify,
                     style: const TextStyle(
-                        fontSize: 13.5,
-                        color: _textSecondary,
-                        height: 1.75,
-                        letterSpacing: 0.1),
+                      fontSize: 13.5,
+                      color: _textSecondary,
+                      height: 1.75,
+                      letterSpacing: 0.1,
+                    ),
                   ),
                   crossFadeState: _isExpanded
                       ? CrossFadeState.showSecond
@@ -693,25 +761,27 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                 ),
                 const SizedBox(height: 12),
                 GestureDetector(
-                  onTap: () =>
-                      setState(() => _isExpanded = !_isExpanded),
-                  child: Row(children: [
-                    Text(
-                      _isExpanded ? 'Sembunyikan' : 'Selengkapnya',
-                      style: const TextStyle(
+                  onTap: () => setState(() => _isExpanded = !_isExpanded),
+                  child: Row(
+                    children: [
+                      Text(
+                        _isExpanded ? 'Sembunyikan' : 'Selengkapnya',
+                        style: const TextStyle(
                           color: _primary,
                           fontSize: 12,
-                          fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      _isExpanded
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color: _primary,
-                      size: 16,
-                    ),
-                  ]),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        _isExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: _primary,
+                        size: 16,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -730,10 +800,7 @@ class _DetailWisataPageState extends State<DetailWisataPage>
         children: [
           _sectionHeader('🖼️', 'Galeri Foto'),
           const SizedBox(height: 14),
-          SizedBox(
-            height: 188,
-            child: _buildGallery(data['gallery'] ?? ''),
-          ),
+          SizedBox(height: 188, child: _buildGallery(data['gallery'] ?? '')),
         ],
       ),
     );
@@ -746,19 +813,20 @@ class _DetailWisataPageState extends State<DetailWisataPage>
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
           padding: EdgeInsets.fromLTRB(
-              20,
-              16,
-              20,
-              MediaQuery.of(context).padding.bottom + 16),
+            20,
+            16,
+            20,
+            MediaQuery.of(context).padding.bottom + 16,
+          ),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.88),
-            border:
-                Border(top: BorderSide(color: _divider, width: 1.5)),
+            border: Border(top: BorderSide(color: _divider, width: 1.5)),
             boxShadow: [
               BoxShadow(
-                  color: _primary.withOpacity(0.14),
-                  blurRadius: 28,
-                  offset: const Offset(0, -8)),
+                color: _primary.withOpacity(0.14),
+                blurRadius: 28,
+                offset: const Offset(0, -8),
+              ),
             ],
           ),
           child: Row(
@@ -772,25 +840,28 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                     const Text(
                       'Mulai dari',
                       style: TextStyle(
-                          fontSize: 11,
-                          color: _textMuted,
-                          fontWeight: FontWeight.w500),
+                        fontSize: 11,
+                        color: _textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       harga,
                       style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: _primaryDark,
-                          letterSpacing: -0.8),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: _primaryDark,
+                        letterSpacing: -0.8,
+                      ),
                     ),
                     const Text(
                       '/orang',
                       style: TextStyle(
-                          fontSize: 10,
-                          color: _textSecondary,
-                          fontWeight: FontWeight.w500),
+                        fontSize: 10,
+                        color: _textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -816,20 +887,25 @@ class _DetailWisataPageState extends State<DetailWisataPage>
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                            color: _primary.withOpacity(0.45),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8)),
+                          color: _primary.withOpacity(0.45),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
                         BoxShadow(
-                            color: _primaryLight.withOpacity(0.25),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2)),
+                          color: _primaryLight.withOpacity(0.25),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.confirmation_number_rounded,
-                            color: Colors.white, size: 18),
+                        Icon(
+                          Icons.confirmation_number_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'PESAN TIKET',
@@ -867,7 +943,9 @@ class _DetailWisataPageState extends State<DetailWisataPage>
               color: Colors.black.withOpacity(0.22),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: Colors.white.withOpacity(0.30), width: 1.2),
+                color: Colors.white.withOpacity(0.30),
+                width: 1.2,
+              ),
             ),
             child: child,
           ),
@@ -878,39 +956,44 @@ class _DetailWisataPageState extends State<DetailWisataPage>
 
   // ── Section header ───────────────────────────────────────
   Widget _sectionHeader(String emoji, String title) {
-    return Row(children: [
-      Container(
-        width: 4,
-        height: 20,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [_primaryDark, _primaryLight],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_primaryDark, _primaryLight],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(2),
           ),
-          borderRadius: BorderRadius.circular(2),
         ),
-      ),
-      const SizedBox(width: 10),
-      Text(emoji, style: const TextStyle(fontSize: 16)),
-      const SizedBox(width: 6),
-      Text(
-        title,
-        style: const TextStyle(
+        const SizedBox(width: 10),
+        Text(emoji, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
             color: _textPrimary,
-            letterSpacing: -0.2),
-      ),
-    ]);
+            letterSpacing: -0.2,
+          ),
+        ),
+      ],
+    );
   }
 
   // ── Gallery horizontal ───────────────────────────────────
   Widget _buildGallery(String galleryString) {
     if (galleryString.isEmpty) {
       return Center(
-        child: Text('Galeri foto belum tersedia.',
-            style: TextStyle(color: _textMuted, fontSize: 13)),
+        child: Text(
+          'Galeri foto belum tersedia.',
+          style: TextStyle(color: _textMuted, fontSize: 13),
+        ),
       );
     }
 
@@ -927,7 +1010,9 @@ class _DetailWisataPageState extends State<DetailWisataPage>
           builder: (context, v, child) => Opacity(
             opacity: v,
             child: Transform.translate(
-                offset: Offset(20 * (1 - v), 0), child: child),
+              offset: Offset(20 * (1 - v), 0),
+              child: child,
+            ),
           ),
           child: Container(
             width: 230,
@@ -936,48 +1021,57 @@ class _DetailWisataPageState extends State<DetailWisataPage>
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                    color: _primary.withOpacity(0.13),
-                    blurRadius: 18,
-                    offset: const Offset(0, 7)),
+                  color: _primary.withOpacity(0.13),
+                  blurRadius: 18,
+                  offset: const Offset(0, 7),
+                ),
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2)),
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: Stack(fit: StackFit.expand, children: [
-                Image.asset(
-                  images[i].trim(),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: _divider,
-                    child: const Center(
-                        child: Icon(Icons.image_rounded,
-                            color: _primary, size: 40)),
-                  ),
-                ),
-                // subtle bottom vignette
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: 60,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          _primaryDark.withOpacity(0.40),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    images[i].trim(),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: _divider,
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_rounded,
+                          color: _primary,
+                          size: 40,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ]),
+                  // subtle bottom vignette
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 60,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            _primaryDark.withOpacity(0.40),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

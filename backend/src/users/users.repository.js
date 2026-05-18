@@ -11,16 +11,29 @@ class UserRepository {
     });
   }
 
+  async resetPassword(userId, newPasswordHash) {
+    return await this._prisma.user.update({
+      where: { id: userId },
+      data: { password: newPasswordHash },
+    });
+  }
+
+  async getUserById(id) {
+    return await this._prisma.user.findUnique({
+      where: { id },
+    });
+  }
+
   async findByEmail(email) {
     return await this._prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
   }
 
   // TAMBAHKAN INI: Untuk cek nomor HP duplikat
   async findByPhone(phone) {
     return await this._prisma.user.findFirst({
-      where: { phone }
+      where: { phone },
     });
   }
 

@@ -4,8 +4,13 @@ import upload from "../config/storage.js";
 import {
   updatePayment,
   getPaymentProof,
+  verifyPaymentAdmin,
+  cancelPaymentAdmin,
 } from "../payment/payment.controller.js";
-import { paymentSchema } from "../payment/payment.schema.js";
+import {
+  paymentSchema,
+  cancelPaymentSchema,
+} from "../payment/payment.schema.js";
 import validate from "../middleware/validate.js";
 
 const routerPayment = express.Router();
@@ -16,6 +21,19 @@ routerPayment.post(
   validate(paymentSchema),
   upload.single("payment_proof"),
   updatePayment,
+);
+
+routerPayment.patch(
+  "/verify/:bookingId",
+  authMiddleware(["ADMIN"]),
+  verifyPaymentAdmin,
+);
+
+routerPayment.patch(
+  "/cancel/:bookingId",
+  authMiddleware(["ADMIN"]),
+  validate(cancelPaymentSchema),
+  cancelPaymentAdmin,
 );
 
 routerPayment.get("/:bookingId/proof", authMiddleware([]), getPaymentProof);

@@ -11,11 +11,8 @@ import '../helper/snackbar_helper.dart';
 class _T {
   static const Color primary = Color(0xFF00B09B);
   static const Color primaryDark = Color(0xFF007A6A);
-  static const Color primaryLight = Color(0xFF4DD9C9);
   static const Color primarySurface = Color(0xFFE0F7F4);
   static const List<Color> headerGrad = [Color(0xFF00B09B), Color(0xFF00D2B4)];
-  static const Color accent = Color(0xFFFF6B35);
-  static const Color accentSoft = Color(0xFFFFF0EB);
   static const Color bgPage = Color(0xFFF2FAF9);
   static const Color bgCard = Color(0xFFFFFFFF);
   static const Color textHead = Color(0xFF0D2B26);
