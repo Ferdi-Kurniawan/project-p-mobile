@@ -15,3 +15,9 @@ export const paymentSchema = {
       }),
   }),
 };
+
+export const cancelPaymentSchema = {
+  body: Joi.object({
+    reason: Joi.string().required(),
+  }),
+};
