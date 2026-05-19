@@ -106,7 +106,16 @@ class BookingRepository {
             },
           },
         },
+        user: {
+          select: { fullname: true, email: true, phone: true },
+        },
       },
+    });
+  }
+
+  async deleteBookingById(bookingId) {
+    return await this._prisma.booking.delete({
+      where: { id: bookingId },
     });
   }
 }

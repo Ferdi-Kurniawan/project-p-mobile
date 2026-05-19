@@ -148,7 +148,7 @@ const getProfile = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       data: {
-        user: {
+        users: {
           id: user.id,
           fullname: user.fullname,
           phone: user.phone,
@@ -189,6 +189,7 @@ const updateProfile = async (req, res, next) => {
 
     if (fullname) updateData.fullname = fullname;
     if (phone) updateData.phone = phone;
+    9;
 
     if (email) {
       if (email !== currentUser.email) {
@@ -209,7 +210,7 @@ const updateProfile = async (req, res, next) => {
       status: "success",
       message: "Profile berhasil diperbarui.",
       data: {
-        user: {
+        users: {
           id: updatedUser.id,
           fullname: updatedUser.fullname,
           phone: updatedUser.phone,

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../helper/snackbar_helper.dart'; // Ditambahkan untuk notifikasi
 import 'login_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -20,8 +21,11 @@ class _ProfilePageState extends State<ProfilePage>
   bool _editingPhone = false;
   bool _editingPassword = false;
 
-  // Variabel untuk menampung nama dari session
+  // Variabel state untuk menampung data user
   String _fullname = '';
+  String _email = '';
+  String _phone = '';
+  String _username = '';
 
   late final TextEditingController _emailController;
   late final TextEditingController _phoneController;
@@ -38,16 +42,19 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void initState() {
     super.initState();
+    // Inisialisasi awal dari data yang dilempar dari halaman sebelumnya
+    _email = widget.userData['email'] ?? '';
+    _phone = widget.userData['phone'] ?? '';
+    _username = widget.userData['username'] ?? '';
 
-    // Memuat data nama dari session SharedPreferences
+    // Memuat data nama dari session lokal
     _loadSessionData();
 
-    _emailController = TextEditingController(
-      text: widget.userData['email'] ?? 'penjelajah@email.com',
-    );
-    _phoneController = TextEditingController(
-      text: widget.userData['phone'] ?? '+62 812-3456-7890',
-    );
+    // Tarik data terbaru dari server (GET PROFILE)
+    _fetchProfileFromServer();
+
+    _emailController = TextEditingController(text: _email);
+    _phoneController = TextEditingController(text: _phone);
     _passwordController = TextEditingController(text: '••••••••');
 
     _animController = AnimationController(
@@ -57,7 +64,7 @@ class _ProfilePageState extends State<ProfilePage>
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
   }
 
-  // Fungsi untuk mengambil nama lengkap dari SharedPreferences
+  // Mengambil nama lengkap dari SharedPreferences sebagai fallback awal
   Future<void> _loadSessionData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -66,6 +73,24 @@ class _ProfilePageState extends State<ProfilePage>
           widget.userData['fullname'] ??
           'Penjelajah';
     });
+  }
+
+  // ── GET PROFILE DARI BACKEND ──
+  Future<void> _fetchProfileFromServer() async {
+    final res = await ApiService.getProfile();
+    if (res['success'] == true && res['user'] != null) {
+      if (mounted) {
+        setState(() {
+          _fullname = res['user']['fullname'] ?? _fullname;
+          _email = res['user']['email'] ?? _email;
+          _phone = res['user']['phone'] ?? _phone;
+          _username = res['user']['username'] ?? _username;
+        });
+        // Update data session agar tetap sinkron
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('fullname', _fullname);
+      }
+    }
   }
 
   @override
@@ -161,21 +186,13 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // ─────────────────────────────────────────────
-  // POPUP: Edit Profil
+  // POPUP: Edit Profil (UPDATE PROFILE)
   // ─────────────────────────────────────────────
   void _showEditProfileDialog() {
-    final nameCtrl = TextEditingController(
-      text: widget.userData['fullname'] ?? _fullname,
-    );
-    final usernameCtrl = TextEditingController(
-      text: widget.userData['username'] ?? '',
-    );
-    final emailCtrl = TextEditingController(
-      text: widget.userData['email'] ?? '',
-    );
-    final phoneCtrl = TextEditingController(
-      text: widget.userData['phone'] ?? '',
-    );
+    final nameCtrl = TextEditingController(text: _fullname);
+    final usernameCtrl = TextEditingController(text: _username);
+    final emailCtrl = TextEditingController(text: _email);
+    final phoneCtrl = TextEditingController(text: _phone);
 
     showDialog(
       context: context,
@@ -306,9 +323,59 @@ class _ProfilePageState extends State<ProfilePage>
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Kirim ke backend
-                        Navigator.pop(ctx);
+                      onPressed: () async {
+                        final newName = nameCtrl.text.trim();
+                        final newEmail = emailCtrl.text.trim();
+                        final newPhone = phoneCtrl.text.trim();
+
+                        if (newName.isEmpty || newEmail.isEmpty) {
+                          CustomSnackBar.show(
+                            context,
+                            "Nama dan Email tidak boleh kosong",
+                            false,
+                          );
+                          return;
+                        }
+
+                        Navigator.pop(ctx); // Tutup form dialog
+
+                        // Tampilkan loading indicator
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => const Center(
+                            child: CircularProgressIndicator(color: teal500),
+                          ),
+                        );
+
+                        // Panggil API Update Profile
+                        final res = await ApiService.updateProfile(
+                          fullname: newName,
+                          email: newEmail,
+                          phone: newPhone.isNotEmpty ? newPhone : null,
+                        );
+
+                        if (!mounted) return;
+                        Navigator.pop(context); // Tutup loading dialog
+
+                        final bool isSuccess = res['success'] == true;
+                        final String msg =
+                            res['message'] ??
+                            (isSuccess
+                                ? 'Profil berhasil diperbarui'
+                                : 'Gagal memperbarui profil');
+
+                        CustomSnackBar.show(context, msg, isSuccess);
+
+                        if (isSuccess && res['user'] != null) {
+                          setState(() {
+                            _fullname = res['user']['fullname'] ?? newName;
+                            _email = res['user']['email'] ?? newEmail;
+                            _phone = res['user']['phone'] ?? newPhone;
+                          });
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('fullname', _fullname);
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: teal500,
@@ -338,7 +405,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // ─────────────────────────────────────────────
-  // POPUP: Ubah Password
+  // POPUP: Ubah Password (CHANGE PASSWORD)
   // ─────────────────────────────────────────────
   void _showChangePasswordDialog() {
     final oldPassCtrl = TextEditingController();
@@ -353,11 +420,14 @@ class _ProfilePageState extends State<ProfilePage>
       barrierColor: Colors.black54,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           backgroundColor: white,
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 40,
+          ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -475,9 +545,67 @@ class _ProfilePageState extends State<ProfilePage>
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          // TODO: Kirim ke backend
-                          Navigator.pop(ctx);
+                        onPressed: () async {
+                          final oldP = oldPassCtrl.text;
+                          final newP = newPassCtrl.text;
+                          final confP = confirmPassCtrl.text;
+
+                          if (oldP.isEmpty || newP.isEmpty || confP.isEmpty) {
+                            CustomSnackBar.show(
+                              context,
+                              "Semua kolom password harus diisi!",
+                              false,
+                            );
+                            return;
+                          }
+
+                          if (newP != confP) {
+                            CustomSnackBar.show(
+                              context,
+                              "Password baru dan konfirmasi tidak cocok!",
+                              false,
+                            );
+                            return;
+                          }
+
+                          if (newP.length < 8) {
+                            CustomSnackBar.show(
+                              context,
+                              "Password baru minimal 8 karakter!",
+                              false,
+                            );
+                            return;
+                          }
+
+                          Navigator.pop(ctx); // Tutup form dialog
+
+                          // Tampilkan loading
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const Center(
+                              child: CircularProgressIndicator(color: teal500),
+                            ),
+                          );
+
+                          // Panggil API Change Password
+                          final res = await ApiService.changePassword(
+                            oldPassword: oldP,
+                            newPassword: newP,
+                            confirmNewPassword: confP,
+                          );
+
+                          if (!mounted) return;
+                          Navigator.pop(context); // Tutup loading
+
+                          final bool isSuccess = res['success'] == true;
+                          final String msg =
+                              res['message'] ??
+                              (isSuccess
+                                  ? 'Password berhasil diubah'
+                                  : 'Gagal mengubah password');
+
+                          CustomSnackBar.show(context, msg, isSuccess);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: teal500,
@@ -590,8 +718,11 @@ class _ProfilePageState extends State<ProfilePage>
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(fontSize: 13, color: Colors.black38),
-            prefixIcon:
-                const Icon(Icons.lock_outline_rounded, size: 18, color: teal500),
+            prefixIcon: const Icon(
+              Icons.lock_outline_rounded,
+              size: 18,
+              color: teal500,
+            ),
             suffixIcon: GestureDetector(
               onTap: onToggle,
               child: Icon(
@@ -628,13 +759,11 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
-    // Menggunakan nama yang sudah dimuat dari session
+    // Menggunakan nama yang sudah dimuat dari session / API
     final String displayFullname = _fullname.isEmpty ? 'Memuat...' : _fullname;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
-      // ── FIX: gunakan CustomScrollView + SliverList agar scroll bekerja
-      // penuh bahkan saat ada BackdropFilter di hero section
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
@@ -810,7 +939,8 @@ class _ProfilePageState extends State<ProfilePage>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: teal500)),
     );
     final bookings = await ApiService.getBookings();
     if (mounted) Navigator.pop(context);
@@ -880,6 +1010,7 @@ class _ProfilePageState extends State<ProfilePage>
                         Color statusColor;
                         switch (status) {
                           case 'PAID':
+                          case 'SUCCESS':
                             statusColor = Colors.green;
                             break;
                           case 'CANCELLED':
