@@ -15,9 +15,7 @@ class _T {
   static const Color primarySurface = Color(0xFFE0F7F4);
   static const List<Color> headerGrad = [Color(0xFF00B09B), Color(0xFF00D2B4)];
   static const Color accent = Color(0xFFFF6B35);
-  static const Color bgPage = Color(
-    0xFFF4F9F8,
-  ); // Sedikit lebih bersih dari sebelumnya
+  static const Color bgPage = Color(0xFFF4F9F8);
   static const Color bgCard = Color(0xFFFFFFFF);
   static const Color textHead = Color(0xFF0D2B26);
   static const Color textBody = Color(0xFF4A6B66);
@@ -76,13 +74,11 @@ class _BookingPageState extends State<BookingPage>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
-
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _pulseAnim = Tween<double>(
       begin: 0.96,
       end: 1.04,
     ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-
     _fadeCtrl.forward();
     if (widget.items.isEmpty) _fetchHistory();
   }
@@ -94,7 +90,7 @@ class _BookingPageState extends State<BookingPage>
     super.dispose();
   }
 
-  // --- LOGIKA DATA (Tetap Mempertahankan Logika Asli) ---
+  // --- LOGIKA DATA ---
   void _fetchHistory() {
     setState(() {
       _futureBookings = ApiService.getBookings();
@@ -148,6 +144,64 @@ class _BookingPageState extends State<BookingPage>
     return 'Rp ${buffer.toString()}';
   }
 
+  // --- HELPER UI STATUS ---
+  StatusUI _getStatusUI(String rawStatus) {
+    final s = rawStatus.toLowerCase();
+    if (s.contains('paid') || s.contains('success')) {
+      return StatusUI(
+        label: "TERVERIFIKASI",
+        actionText: "Lihat E-Tiket",
+        color: _T.green,
+        icon: Icons.check_circle_rounded,
+        bannerTitle: "Pembayaran Tuntas",
+        bannerSub: "Tiket Anda sudah siap digunakan",
+        bannerGrad: [_T.primary, _T.primaryLight],
+      );
+    } else if (s.contains('pending_verification') ||
+        s.contains('verification')) {
+      return StatusUI(
+        label: "DIPROSES",
+        actionText: "Lihat Detail",
+        color: Colors.blue.shade500,
+        icon: Icons.hourglass_top_rounded,
+        bannerTitle: "Menunggu Verifikasi",
+        bannerSub: "Admin sedang mengecek pembayaran Anda",
+        bannerGrad: [Colors.blue.shade500, Colors.blue.shade400],
+      );
+    } else if (s.contains('cancel')) {
+      return StatusUI(
+        label: "DIBATALKAN",
+        actionText: "Lihat Detail",
+        color: Colors.red.shade500,
+        icon: Icons.cancel_rounded,
+        bannerTitle: "Pesanan Dibatalkan",
+        bannerSub: "Pembayaran ditolak atau dibatalkan",
+        bannerGrad: [Colors.red.shade500, Colors.red.shade400],
+      );
+    } else if (s.contains('expire')) {
+      return StatusUI(
+        label: "KADALUARSA",
+        actionText: "Lihat Detail",
+        color: _T.textMuted,
+        icon: Icons.timer_off_rounded,
+        bannerTitle: "Waktu Habis",
+        bannerSub: "Pesanan ini sudah tidak berlaku",
+        bannerGrad: [_T.textMuted, Colors.grey.shade400],
+      );
+    } else {
+      // Default: pending
+      return StatusUI(
+        label: "MENUNGGU BAYAR",
+        actionText: "Bayar Sekarang",
+        color: _T.accent,
+        icon: Icons.schedule_rounded,
+        bannerTitle: "Menunggu Transfer",
+        bannerSub: "Segera upload bukti pembayaran",
+        bannerGrad: [const Color(0xFFFF7A45), const Color(0xFFFF9C73)],
+      );
+    }
+  }
+
   Future<void> _handleCreateBooking() async {
     setState(() => _isLoading = true);
     final result = await ApiService.createBooking(
@@ -178,37 +232,29 @@ class _BookingPageState extends State<BookingPage>
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
     if (pickedFile != null) {
       setState(() {
         _imageProof = File(pickedFile.path);
         _isLoading = true;
       });
-
       final res = await ApiService.uploadPaymentProof(
         bookingId: _bookingIdFromBackend!,
         paymentMethod: 'Transfer Bank',
         imageFile: _imageProof!,
       );
-
       if (!mounted) return;
       setState(() => _isLoading = false);
 
       final bool isSuccess = res['success'] == true;
       final String msg = res['message'];
-
       CustomSnackBar.show(context, msg, isSuccess);
 
       if (isSuccess) {
-        // ── PERBAIKAN DI SINI ──
         setState(() {
-          // Update status lokal agar UI berubah menjadi TERVERIFIKASI
-          _currentStatus = "paid";
+          // Update status lokal agar UI berubah menjadi DIPROSES
+          _currentStatus = "pending_verification";
         });
-
-        // Muat ulang riwayat agar saat kembali ke daftar, statusnya sudah terupdate
         _fetchHistory();
-
         _showSuksesSheet();
       } else {
         setState(() {
@@ -320,7 +366,6 @@ class _BookingPageState extends State<BookingPage>
               }
               final bookings = snapshot.data ?? [];
               if (bookings.isEmpty) return _buildEmptyState();
-
               return Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
                 child: Column(
@@ -338,8 +383,9 @@ class _BookingPageState extends State<BookingPage>
 
   // --- KARTU RIWAYAT ALA TIKET FISIK ---
   Widget _buildPremiumHistoryCard(Map<String, dynamic> b) {
-    final status = b['status']?.toString().toLowerCase() ?? 'pending';
-    final isPaid = status.contains('paid') || status.contains('success');
+    final status = b['status']?.toString() ?? 'pending';
+    final statusUI = _getStatusUI(status);
+
     final String ticketCode = b['ticket_code'] ?? "TICKET-${b['id'] ?? 'NEW'}";
     final String date = _formatTanggal(b['start_date']?.toString());
     final int price = b['total_price'] ?? 0;
@@ -371,11 +417,13 @@ class _BookingPageState extends State<BookingPage>
               _currentStatus = status;
               _activeTotalFromHistory = price;
             });
-            if (isPaid) _loadPaymentProof(_bookingIdFromBackend!);
+            // Selalu coba muat gambar bukti jika bukan pending biasa
+            if (status.toLowerCase() != 'pending') {
+              _loadPaymentProof(_bookingIdFromBackend!);
+            }
           },
           child: Column(
             children: [
-              // Bagian Atas Tiket
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -390,28 +438,24 @@ class _BookingPageState extends State<BookingPage>
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: isPaid
-                                ? _T.green.withOpacity(0.12)
-                                : _T.accent.withOpacity(0.12),
+                            color: statusUI.color.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isPaid
-                                    ? Icons.check_circle_rounded
-                                    : Icons.schedule_rounded,
-                                color: isPaid ? _T.green : _T.accent,
+                                statusUI.icon,
+                                color: statusUI.color,
                                 size: 14,
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                isPaid ? "TERVERIFIKASI" : "MENUNGGU BAYAR",
+                                statusUI.label,
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
-                                  color: isPaid ? _T.primaryDark : _T.accent,
+                                  color: statusUI.color,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -458,7 +502,6 @@ class _BookingPageState extends State<BookingPage>
                 ),
               ),
 
-              // Garis Pemisah Tiket (Dashed Line + Inner Notches)
               Stack(
                 children: [
                   SizedBox(
@@ -514,7 +557,6 @@ class _BookingPageState extends State<BookingPage>
                 ],
               ),
 
-              // Bagian Bawah Tiket (Harga & Call to Action)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: Row(
@@ -539,11 +581,11 @@ class _BookingPageState extends State<BookingPage>
                       ],
                     ),
                     Text(
-                      isPaid ? "Lihat E-Tiket" : "Bayar Sekarang",
+                      statusUI.actionText,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: isPaid ? _T.primary : _T.accent,
+                        color: statusUI.color,
                       ),
                     ),
                   ],
@@ -560,22 +602,23 @@ class _BookingPageState extends State<BookingPage>
   //  TAMPILAN B: DETAIL PESANAN & PEMBAYARAN (DETAIL VIEW)
   // ════════════════════════════════════════════════════════
   Widget _buildDetailView() {
-    final bool isPaid =
-        _currentStatus?.contains('paid') == true ||
-        _currentStatus?.contains('success') == true;
+    final status = _currentStatus?.toLowerCase() ?? 'pending';
+    final statusUI = _getStatusUI(status);
+    final bool showUpload =
+        status == 'pending'; // Tombol upload hanya muncul saat pending
+
     final int total = (_isBookingCreated && widget.items.isEmpty)
         ? _activeTotalFromHistory
         : widget.totalHarga;
-    final String title = isPaid ? "E-Tiket Resmi" : "Selesaikan Pembayaran";
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
         _buildSliverHeader(
-          icon: isPaid
-              ? Icons.verified_user_rounded
-              : Icons.account_balance_wallet_rounded,
-          title: title,
+          icon: statusUI.icon,
+          title: status == 'paid' || status == 'success'
+              ? "E-Tiket Resmi"
+              : "Detail Pemesanan",
           subtitle: _ticketCodeFromBackend != null
               ? "Booking Ref: $_ticketCodeFromBackend"
               : "Verifikasi instruksi di bawah ini",
@@ -593,7 +636,7 @@ class _BookingPageState extends State<BookingPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildModernStatusBanner(isPaid),
+                _buildModernStatusBanner(statusUI), // Menggunakan helper
                 const SizedBox(height: 24),
 
                 if (widget.items.isNotEmpty) ...[
@@ -627,7 +670,9 @@ class _BookingPageState extends State<BookingPage>
                   Icons.cloud_done_rounded,
                 ),
                 const SizedBox(height: 12),
-                _buildModernProofSection(isPaid),
+                _buildModernProofSection(
+                  showUpload,
+                ), // Mengirim parameter boolean showUpload
               ],
             ),
           ),
@@ -637,21 +682,19 @@ class _BookingPageState extends State<BookingPage>
   }
 
   // --- KOMPONEN: BANNER STATUS PREMIUM ---
-  Widget _buildModernStatusBanner(bool isPaid) {
+  Widget _buildModernStatusBanner(StatusUI statusUI) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isPaid
-              ? [_T.primary, _T.primaryLight]
-              : [const Color(0xFFFF7A45), const Color(0xFFFF9C73)],
+          colors: statusUI.bannerGrad,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isPaid ? _T.primary : _T.accent).withOpacity(0.25),
+            color: statusUI.color.withOpacity(0.25),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -665,13 +708,7 @@ class _BookingPageState extends State<BookingPage>
               color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              isPaid
-                  ? Icons.check_circle_outline_rounded
-                  : Icons.info_outline_rounded,
-              color: Colors.white,
-              size: 28,
-            ),
+            child: Icon(statusUI.icon, color: Colors.white, size: 28),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -679,7 +716,7 @@ class _BookingPageState extends State<BookingPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isPaid ? "Pembayaran Tuntas" : "Menunggu Transfer",
+                  statusUI.bannerTitle,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -689,9 +726,7 @@ class _BookingPageState extends State<BookingPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isPaid
-                      ? "Tiket Anda sudah siap digunakan"
-                      : "Segera upload bukti pembayaran",
+                  statusUI.bannerSub,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white.withOpacity(0.9),
@@ -871,9 +906,7 @@ class _BookingPageState extends State<BookingPage>
             ),
           ),
           IconButton(
-            onPressed: () {
-              /* Opsi salin jika ada */
-            },
+            onPressed: () {},
             icon: const Icon(Icons.copy_rounded, color: _T.primary, size: 20),
             tooltip: "Salin Rekening",
           ),
@@ -883,7 +916,7 @@ class _BookingPageState extends State<BookingPage>
   }
 
   // --- KOMPONEN: AREA UPLOAD & PREVIEW BUKTI ---
-  Widget _buildModernProofSection(bool isPaid) {
+  Widget _buildModernProofSection(bool showUploadButton) {
     return Column(
       children: [
         Container(
@@ -913,15 +946,15 @@ class _BookingPageState extends State<BookingPage>
                 : (_imageProof != null
                       ? Image.file(_imageProof!, fit: BoxFit.cover)
                       : _buildProofPlaceholder(
-                          isPaid
+                          !showUploadButton
                               ? "Dokumen Tersimpan"
                               : "Belum ada file diunggah",
                           Icons.image_search_rounded,
                         )),
           ),
         ),
-        if (!isPaid) const SizedBox(height: 16),
-        if (!isPaid)
+        if (showUploadButton) const SizedBox(height: 16),
+        if (showUploadButton)
           GestureDetector(
             onTap: _pickAndUploadImage,
             child: Container(
@@ -1011,7 +1044,6 @@ class _BookingPageState extends State<BookingPage>
           bottom: false,
           child: Stack(
             children: [
-              // Efek dekorasi lingkaran latar belakang abstrak
               Positioned(
                 top: -40,
                 right: -30,
@@ -1036,7 +1068,6 @@ class _BookingPageState extends State<BookingPage>
                   ),
                 ),
               ),
-
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
                 child: Column(
@@ -1315,4 +1346,24 @@ class _BookingPageState extends State<BookingPage>
       ),
     );
   }
+}
+
+class StatusUI {
+  final String label;
+  final String actionText;
+  final Color color;
+  final IconData icon;
+  final String bannerTitle;
+  final String bannerSub;
+  final List<Color> bannerGrad;
+
+  StatusUI({
+    required this.label,
+    required this.actionText,
+    required this.color,
+    required this.icon,
+    required this.bannerTitle,
+    required this.bannerSub,
+    required this.bannerGrad,
+  });
 }

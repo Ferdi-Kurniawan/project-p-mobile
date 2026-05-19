@@ -57,9 +57,11 @@ class _CartPageState extends State<CartPage>
   // ── TIDAK DIUBAH ──
   Future<void> _syncCartFromServer() async {
     try {
-      final serverCart = await ApiService.getCart();
-      if (serverCart.isNotEmpty) {
-        CartModel.instance.updateItemsFromServer(serverCart);
+      final response = await ApiService.getCart();
+
+      // Ambil list 'cart' langsung dari respons Map
+      if (response['success'] == true && response['cart'] != null) {
+        CartModel.instance.updateItemsFromServer(response['cart']);
       }
     } catch (e) {
       print("SYNC CART ERROR: $e");
@@ -493,13 +495,6 @@ class _CartPageState extends State<CartPage>
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  "${item.quantity}x · ${item.loc}",
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: _T.textMuted,
-                                  ),
                                 ),
                               ],
                             ),
@@ -1138,17 +1133,6 @@ class _CartPageState extends State<CartPage>
                             color: _T.primary,
                           ),
                           const SizedBox(width: 3),
-                          Expanded(
-                            child: Text(
-                              item.loc,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: _T.textBody,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
                         ],
                       ),
                     ],

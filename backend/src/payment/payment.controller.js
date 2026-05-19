@@ -5,7 +5,6 @@ import { sendEmail } from "../config/nodemailer.js";
 
 const updatePayment = async (req, res, next) => {
   try {
-    // 1. TAMBAHKAN VALIDASI INI PALING ATAS
     if (!req.file) {
       return res.status(400).json({
         status: "error",
@@ -39,12 +38,10 @@ const updatePayment = async (req, res, next) => {
 
     res.status(200).json({
       status: "success",
-      message:
-        "Pembayaran berhasil dikonfirmasi dan status menjadi PENDING_VERIFICATION.",
+      message: "Pembayaran berhasil dikonfirmasi",
       data: { booking: booking },
     });
   } catch (error) {
-    // Tangani error khusus dari Prisma jika data tidak ditemukan / bukan milik user
     if (error.code === "P2025") {
       return res.status(404).json({
         status: "error",
@@ -146,7 +143,7 @@ const verifyPaymentAdmin = async (req, res) => {
     return res.status(200).json({
       status: "success",
       message: "Pembayaran berhasil diverifikasi dan email telah dikirim.",
-      data : { booking : booking }
+      data: { booking: booking },
     });
   } catch (error) {
     return res.status(500).json({ status: "fail", error: error.message });

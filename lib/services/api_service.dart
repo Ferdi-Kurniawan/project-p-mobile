@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http_parser/http_parser.dart'; // Wajib ditambahkan
+import 'package:http_parser/http_parser.dart';
 
 class ApiService {
-  static const String baseUrl = "http://10.0.2.2:3000";
+  static const String baseUrl = "http://192.168.1.9:3001";
   static Map<String, dynamic>? userData;
   static final http.Client _client = http.Client();
 
@@ -24,6 +24,9 @@ class ApiService {
   // ═══════════════════════════════════════════════════
 
   // ── REGISTER ──
+  // POST /users
+  // Body: fullname, phone, email, password
+  // Returns: { success, message }
   static Future<Map<String, dynamic>> register(
     String fullname,
     String phone,
@@ -41,8 +44,6 @@ class ApiService {
           "password": password,
         }),
       );
-      print("REGISTER: ${response.statusCode}");
-      print(response.body);
 
       final data = jsonDecode(response.body);
       return {
@@ -50,13 +51,11 @@ class ApiService {
         "message": data["message"] ?? data["status"],
       };
     } on SocketException {
-      print("REGISTER ERROR: Tidak ada koneksi internet / Server Down");
       return {
         "success": false,
         "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
       };
     } catch (e) {
-      print("REGISTER ERROR: $e");
       return {
         "success": false,
         "message": "Terjadi kesalahan sistem. Silakan coba lagi.",
@@ -65,49 +64,41 @@ class ApiService {
   }
 
   // ── LOGIN ──
+  // POST /users/login
+  // Body: email, password
+  // Returns: { success, message, user? }
   static Future<Map<String, dynamic>> login(
     String email,
     String password,
   ) async {
     try {
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse("$baseUrl/users/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"email": email, "password": password}),
       );
 
       final data = jsonDecode(response.body);
-      print("LOGIN STATUS: ${response.statusCode}");
 
       if (response.statusCode == 200) {
-        // --- Bagian Cookie Tetap Sama ---
-        String? rawCookie = response.headers['set-cookie'];
+        final String? rawCookie = response.headers['set-cookie'];
         if (rawCookie != null) {
-          int index = rawCookie.indexOf(';');
-          String sessionCookie = (index == -1)
+          final int index = rawCookie.indexOf(';');
+          final String sessionCookie = (index == -1)
               ? rawCookie
               : rawCookie.substring(0, index);
-
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('cookie', sessionCookie);
-          print("LOGIN SUCCESS: Cookie disimpan - $sessionCookie");
-        } else {
-          print("LOGIN WARNING: Tidak ada cookie di response");
         }
 
-        // --- Simpan ke variabel static dan Return Map Lengkap ---
         userData = data["data"]["user"];
         return {
           "success": true,
-          "message": data["message"] ?? data["status"] ?? "Login Berhasil",
+          "message": data["message"] ?? "Login Berhasil",
           "user": data["data"]["user"],
         };
       } else {
-        // Jika status code bukan 200 (misal 401 atau 404)
-        return {
-          "success": false,
-          "message": data["message"] ?? data["status"] ?? "Login Gagal",
-        };
+        return {"success": false, "message": data["message"] ?? "Login Gagal"};
       }
     } on SocketException {
       return {
@@ -120,6 +111,8 @@ class ApiService {
   }
 
   // ── LOGOUT ──
+  // POST /users/logout
+  // Returns: bool
   static Future<bool> logout() async {
     try {
       final headers = await _authHeaders(json: false);
@@ -127,7 +120,6 @@ class ApiService {
         Uri.parse("$baseUrl/users/logout"),
         headers: headers,
       );
-      print("LOGOUT STATUS: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
@@ -139,71 +131,167 @@ class ApiService {
         return true;
       }
     } on SocketException {
-      print("LOGOUT ERROR: Tidak ada koneksi internet / Server Down");
+      return false;
     } catch (e) {
-      print("LOGOUT ERROR: $e");
+      return false;
     }
     return false;
   }
 
-  // ═══════════════════════════════════════════════════
-  //  PRODUCTS
-  // ═══════════════════════════════════════════════════
-
-  // ── GET ALL PRODUCTS ──
-  static Future<List<dynamic>> getProducts() async {
+  // ── GET PROFILE ──
+  // GET /users/profile  [AUTH]
+  // Returns: { success, message, user? }
+  static Future<Map<String, dynamic>> getProfile() async {
     try {
-      final response = await _client.get(Uri.parse("$baseUrl/product"));
-      print("GET PRODUCTS: ${response.statusCode}");
+      final headers = await _authHeaders(json: false);
+      final response = await _client.get(
+        Uri.parse("$baseUrl/users/profile"),
+        headers: headers,
+      );
+
+      final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map && data['data'] != null) {
-          final inner = data['data'];
-          if (inner is Map && inner['product'] != null) {
-            return List<dynamic>.from(inner['product']);
-          }
-          if (inner is List) {
-            return List<dynamic>.from(inner);
-          }
-        }
-        if (data is List) {
-          return List<dynamic>.from(data);
-        }
+        return {
+          "success": true,
+          "message": data["message"] ?? "Berhasil mengambil profil",
+          "user": data["data"]["users"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal mengambil profil",
+        };
       }
     } on SocketException {
-      print("GET PRODUCTS ERROR: Tidak ada koneksi internet / Server Down");
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
     } catch (e) {
-      print("GET PRODUCTS ERROR: $e");
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
     }
-    return [];
   }
 
-  // ── GET PRODUCT BY ID ──
-  static Future<Map<String, dynamic>?> getProductById(String productId) async {
+  // ── UPDATE PROFILE ──
+  // PATCH /users/profile  [AUTH]
+  // Body: fullname?, phone?, email?  (minimal 1 field)
+  // Returns: { success, message, user? }
+  static Future<Map<String, dynamic>> updateProfile({
+    String? fullname,
+    String? phone,
+    String? email,
+  }) async {
     try {
-      final response = await _client.get(
-        Uri.parse("$baseUrl/product/$productId"),
+      final headers = await _authHeaders();
+      final Map<String, dynamic> body = {};
+      if (fullname != null) body['fullname'] = fullname;
+      if (phone != null) body['phone'] = phone;
+      if (email != null) body['email'] = email;
+
+      final response = await _client.patch(
+        Uri.parse("$baseUrl/users/profile"),
+        headers: headers,
+        body: jsonEncode(body),
       );
-      print("GET PRODUCT BY ID: ${response.statusCode}");
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Profile berhasil diperbarui",
+          "user": data["data"]["users"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal memperbarui profil",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ── CHANGE PASSWORD ──
+  // PATCH /users/change-password  [AUTH]
+  // Body: oldPassword, newPassword, confirmNewPassword
+  // Returns: { success, message }
+  static Future<Map<String, dynamic>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmNewPassword,
+  }) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await _client.patch(
+        Uri.parse("$baseUrl/users/change-password"),
+        headers: headers,
+        body: jsonEncode({
+          "oldPassword": oldPassword,
+          "newPassword": newPassword,
+          "confirmNewPassword": confirmNewPassword,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Password berhasil diperbarui",
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["error"] ?? data["message"] ?? "Gagal mengubah password",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ── GET ALL USERS ──
+  // GET /users/data-user  [AUTH]
+  // Returns: List<dynamic> (list of users)
+  static Future<List<dynamic>> getAllUsers() async {
+    try {
+      final headers = await _authHeaders(json: false);
+      final response = await _client.get(
+        Uri.parse("$baseUrl/users/data-user"),
+        headers: headers,
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data is Map && data['data'] != null) {
           final inner = data['data'];
-          if (inner is Map && inner['product'] != null) {
-            return Map<String, dynamic>.from(inner['product']);
+          if (inner is Map && inner['users'] != null) {
+            return List<dynamic>.from(inner['users']);
           }
         }
       }
     } on SocketException {
-      print(
-        "GET PRODUCT BY ID ERROR: Tidak ada koneksi internet / Server Down",
-      );
+      // no-op
     } catch (e) {
-      print("GET PRODUCT BY ID ERROR: $e");
+      // no-op
     }
-    return null;
+    return [];
   }
 
   // ═══════════════════════════════════════════════════
@@ -211,10 +299,11 @@ class ApiService {
   // ═══════════════════════════════════════════════════
 
   // ── GET ALL CATEGORIES ──
+  // GET /category
+  // Returns: List<dynamic>
   static Future<List<dynamic>> getCategories() async {
     try {
       final response = await _client.get(Uri.parse("$baseUrl/category"));
-      print("GET CATEGORIES: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -223,24 +312,22 @@ class ApiService {
           if (inner is Map && inner['categories'] != null) {
             return List<dynamic>.from(inner['categories']);
           }
-          if (inner is List) {
-            return List<dynamic>.from(inner);
-          }
         }
       }
     } on SocketException {
-      print("GET CATEGORIES ERROR: Tidak ada koneksi internet / Server Down");
+      // no-op
     } catch (e) {
-      print("GET CATEGORIES ERROR: $e");
+      // no-op
     }
     return [];
   }
 
   // ── GET CATEGORY BY ID ──
+  // GET /category/:id
+  // Returns: Map<String, dynamic>? (single category)
   static Future<Map<String, dynamic>?> getCategoryById(String id) async {
     try {
       final response = await _client.get(Uri.parse("$baseUrl/category/$id"));
-      print("GET CATEGORY BY ID: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -252,13 +339,311 @@ class ApiService {
         }
       }
     } on SocketException {
-      print(
-        "GET CATEGORY BY ID ERROR: Tidak ada koneksi internet / Server Down",
-      );
+      // no-op
     } catch (e) {
-      print("GET CATEGORY BY ID ERROR: $e");
+      // no-op
     }
     return null;
+  }
+
+  // ── CREATE CATEGORY ──  [ADMIN]
+  // POST /category
+  // Body: name
+  // Returns: { success, message, category? }
+  static Future<Map<String, dynamic>> createCategory(String name) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await _client.post(
+        Uri.parse("$baseUrl/category"),
+        headers: headers,
+        body: jsonEncode({"name": name}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Kategori berhasil dibuat",
+          "category": data["data"]?["category"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal membuat kategori",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ── UPDATE CATEGORY ──  [ADMIN]
+  // PUT /category/:id
+  // Body: name
+  // Returns: { success, message, category? }
+  static Future<Map<String, dynamic>> updateCategory(
+    String id,
+    String name,
+  ) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await _client.put(
+        Uri.parse("$baseUrl/category/$id"),
+        headers: headers,
+        body: jsonEncode({"name": name}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Kategori berhasil diperbarui",
+          "category": data["data"]?["category"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal memperbarui kategori",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ── DELETE CATEGORY ──  [ADMIN]
+  // DELETE /category/:id
+  // Returns: { success, message }
+  static Future<Map<String, dynamic>> deleteCategory(String id) async {
+    try {
+      final headers = await _authHeaders(json: false);
+      final response = await _client.delete(
+        Uri.parse("$baseUrl/category/$id"),
+        headers: headers,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Kategori berhasil dihapus",
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal menghapus kategori",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  PRODUCTS
+  // ═══════════════════════════════════════════════════
+
+  // ── GET ALL PRODUCTS ──
+  // GET /product
+  // Returns: List<dynamic>
+  // FIX: key API adalah 'products' (plural), bukan 'product'
+  static Future<List<dynamic>> getProducts() async {
+    try {
+      final response = await _client.get(Uri.parse("$baseUrl/product"));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['data'] != null) {
+          final inner = data['data'];
+          if (inner is Map && inner['products'] != null) {
+            return List<dynamic>.from(inner['products']);
+          }
+        }
+      }
+    } on SocketException {
+      // no-op
+    } catch (e) {
+      // no-op
+    }
+    return [];
+  }
+
+  // ── GET PRODUCT BY ID ──
+  // GET /product/:productId
+  // Returns: Map<String, dynamic>?
+  static Future<Map<String, dynamic>?> getProductById(String productId) async {
+    try {
+      final response = await _client.get(
+        Uri.parse("$baseUrl/product/$productId"),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['data'] != null) {
+          final inner = data['data'];
+          if (inner is Map && inner['product'] != null) {
+            return Map<String, dynamic>.from(inner['product']);
+          }
+        }
+      }
+    } on SocketException {
+      // no-op
+    } catch (e) {
+      // no-op
+    }
+    return null;
+  }
+
+  // ── CREATE PRODUCT ──  [ADMIN]
+  // POST /product
+  // Body: name, price, stock?, category_id (UUID)
+  // Returns: { success, message, product? }
+  static Future<Map<String, dynamic>> createProduct({
+    required String name,
+    required int price,
+    required String categoryId,
+    int stock = 0,
+  }) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await _client.post(
+        Uri.parse("$baseUrl/product"),
+        headers: headers,
+        body: jsonEncode({
+          "name": name,
+          "price": price,
+          "stock": stock,
+          "category_id": categoryId,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Produk berhasil dibuat",
+          "product": data["data"]?["product"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message": data["message"] ?? data["error"] ?? "Gagal membuat produk",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ── UPDATE PRODUCT ──  [ADMIN]
+  // PUT /product/:productId
+  // Body: name, price, stock?, category_id (UUID)
+  // Returns: { success, message, product? }
+  static Future<Map<String, dynamic>> updateProduct({
+    required String productId,
+    required String name,
+    required int price,
+    required String categoryId,
+    int stock = 0,
+  }) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await _client.put(
+        Uri.parse("$baseUrl/product/$productId"),
+        headers: headers,
+        body: jsonEncode({
+          "name": name,
+          "price": price,
+          "stock": stock,
+          "category_id": categoryId,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Produk berhasil diperbarui",
+          "product": data["data"]?["product"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal memperbarui produk",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ── DELETE PRODUCT ──  [ADMIN]
+  // DELETE /product/:productId
+  // Returns: { success, message }
+  static Future<Map<String, dynamic>> deleteProduct(String productId) async {
+    try {
+      final headers = await _authHeaders(json: false);
+      final response = await _client.delete(
+        Uri.parse("$baseUrl/product/$productId"),
+        headers: headers,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Produk berhasil dihapus",
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal menghapus produk",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
   }
 
   // ═══════════════════════════════════════════════════
@@ -266,6 +651,9 @@ class ApiService {
   // ═══════════════════════════════════════════════════
 
   // ── ADD TO CART ──
+  // POST /booking/add-item  [AUTH]
+  // Body: productId, quantity
+  // Returns: { success, message, cart? }
   static Future<Map<String, dynamic>> addToCart(
     String productId,
     int quantity,
@@ -280,51 +668,81 @@ class ApiService {
 
       final data = jsonDecode(response.body);
 
-      return {
-        // Cek status sukses 200 atau 201
-        "success": response.statusCode == 200 || response.statusCode == 201,
-        // Ambil message dari key 'message' atau 'status'
-        "message": data["message"] ?? data["status"] ?? data["error"],
-      };
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          "success": true,
+          "message":
+              data["message"] ?? "Barang berhasil ditambahkan ke keranjang",
+          "cart": data["cart"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["error"] ??
+              data["message"] ??
+              "Gagal menambahkan ke keranjang",
+        };
+      }
     } on SocketException {
-      return {"success": false, "message": "Tidak ada koneksi internet."};
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
     } catch (e) {
-      return {"success": false, "message": "Terjadi kesalahan: $e"};
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
     }
   }
 
   // ── GET CART ──
-  static Future<List<dynamic>> getCart() async {
+  // GET /booking/cart  [AUTH]
+  // Returns: { success, cart, total_cart_price }
+  // FIX: dikembalikan sebagai Map agar total_cart_price bisa diakses
+  static Future<Map<String, dynamic>> getCart() async {
     try {
       final headers = await _authHeaders(json: false);
       final response = await _client.get(
         Uri.parse("$baseUrl/booking/cart"),
         headers: headers,
       );
-      print("GET CART: ${response.statusCode}");
-      print("GET CART BODY: ${response.body}");
+
+      final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map && data['cart'] != null) {
-          return data['cart'] as List<dynamic>;
-        }
-        if (data is Map && data['data'] != null) {
-          return data['data'] as List<dynamic>;
-        }
-        if (data is List) {
-          return data as List<dynamic>;
-        }
+        return {
+          "success": true,
+          "cart": data["cart"] ?? [],
+          "total_cart_price": data["total_cart_price"] ?? 0,
+        };
+      } else {
+        return {
+          "success": false,
+          "message": data["error"] ?? "Gagal mengambil keranjang",
+          "cart": [],
+          "total_cart_price": 0,
+        };
       }
     } on SocketException {
-      print("GET CART ERROR: Tidak ada koneksi internet / Server Down");
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+        "cart": [],
+        "total_cart_price": 0,
+      };
     } catch (e) {
-      print("GET CART ERROR: $e");
+      return {
+        "success": false,
+        "message": "Terjadi kesalahan sistem.",
+        "cart": [],
+        "total_cart_price": 0,
+      };
     }
-    return [];
   }
 
   // ── REMOVE FROM CART ──
+  // POST /booking/remove-item  [AUTH]
+  // Body: productId
+  // Returns: { success, message, cart? }
   static Future<Map<String, dynamic>> removeFromCart(String productId) async {
     try {
       final headers = await _authHeaders();
@@ -333,26 +751,38 @@ class ApiService {
         headers: headers,
         body: jsonEncode({"productId": productId}),
       );
-      print("REMOVE CART: ${response.statusCode}");
 
-      return {
-        "success": response.statusCode == 200,
-        "message": response.statusCode == 200
-            ? "Item removed from cart successfully."
-            : "Failed to remove item from cart.",
-      };
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message":
+              data["message"] ?? "Barang berhasil dihapus dari keranjang",
+          "cart": data["cart"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["error"] ??
+              data["message"] ??
+              "Gagal menghapus dari keranjang",
+        };
+      }
     } on SocketException {
-      print("REMOVE CART ERROR: Tidak ada koneksi internet / Server Down");
-      return {"success": false, "message": "Tidak ada koneksi internet."}
-          as Map<String, dynamic>;
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
     } catch (e) {
-      print("REMOVE CART ERROR: $e");
-      return {"success": false, "message": "Terjadi kesalahan: $e"}
-          as Map<String, dynamic>;
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
     }
   }
 
   // ── CLEAR CART ──
+  // POST /booking/clear-cart  [AUTH]
+  // Returns: { success, message }
   static Future<Map<String, dynamic>> clearCart() async {
     try {
       final headers = await _authHeaders(json: false);
@@ -360,31 +790,43 @@ class ApiService {
         Uri.parse("$baseUrl/booking/clear-cart"),
         headers: headers,
       );
-      print("CLEAR CART: ${response.statusCode}");
 
-      return {
-            "success": response.statusCode == 200,
-            "message": response.statusCode == 200
-                ? "Cart cleared successfully."
-                : "Failed to clear cart.",
-          }
-          as Map<String, dynamic>;
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Keranjang berhasil dikosongkan",
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["error"] ??
+              data["message"] ??
+              "Gagal mengosongkan keranjang",
+        };
+      }
     } on SocketException {
-      print("CLEAR CART ERROR: Tidak ada koneksi internet / Server Down");
-      return {"success": false, "message": "Tidak ada koneksi internet."}
-          as Map<String, dynamic>;
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
     } catch (e) {
-      print("CLEAR CART ERROR: $e");
-      return {"success": false, "message": "Terjadi kesalahan: $e"}
-          as Map<String, dynamic>;
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
     }
   }
 
   // ═══════════════════════════════════════════════════
   //  BOOKING
-  // ══════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════
 
   // ── CREATE BOOKING ──
+  // POST /booking  [AUTH]
+  // Body: startDate (ISO 8601), endDate (ISO 8601)
+  // Catatan: Keranjang harus terisi sebelum create booking.
+  //          Setelah berhasil, keranjang otomatis dikosongkan oleh server.
+  // Returns: { success, message, data? }
   static Future<Map<String, dynamic>> createBooking({
     required String startDate,
     required String endDate,
@@ -396,38 +838,36 @@ class ApiService {
         headers: headers,
         body: jsonEncode({"startDate": startDate, "endDate": endDate}),
       );
-      print("CREATE BOOKING STATUS: ${response.statusCode}");
-      print("CREATE BOOKING BODY: ${response.body}");
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {
           "success": true,
-          "message":
-              data["message"] ?? data["status"] ?? "Booking berhasil dibuat",
-          "data": data['data'],
+          "message": data["message"] ?? "Booking berhasil dibuat",
+          "data": data["data"],
         };
       } else {
         return {
           "success": false,
           "message":
-              data["message"] ?? data["error"] ?? "Gagal membuat booking",
+              data["error"] ?? data["message"] ?? "Gagal membuat booking",
         };
       }
     } on SocketException {
-      print("CREATE BOOKING ERROR: Tidak ada koneksi internet / Server Down");
       return {
         "success": false,
-        "message": "Tidak ada koneksi internet. Silakan periksa jaringan Anda.",
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
       };
     } catch (e) {
-      print("CREATE BOOKING ERROR: $e");
       return {"success": false, "message": "Terjadi kesalahan sistem."};
     }
   }
 
   // ── GET MY BOOKINGS ──
+  // GET /booking  [AUTH]
+  // Returns: List<dynamic> (booking milik user yang login)
+  // FIX: key API adalah 'booking' (singular), bukan 'bookings'
   static Future<List<dynamic>> getBookings() async {
     try {
       final headers = await _authHeaders(json: false);
@@ -435,26 +875,27 @@ class ApiService {
         Uri.parse("$baseUrl/booking"),
         headers: headers,
       );
-      print("GET BOOKINGS STATUS: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data is Map && data['data'] != null) {
           final inner = data['data'];
-          if (inner is Map && inner['bookings'] != null) {
-            return List<dynamic>.from(inner['bookings']);
+          if (inner is Map && inner['booking'] != null) {
+            return List<dynamic>.from(inner['booking']);
           }
         }
       }
     } on SocketException {
-      print("GET BOOKINGS ERROR: Tidak ada koneksi internet / Server Down");
+      // no-op
     } catch (e) {
-      print("GET BOOKINGS ERROR: $e");
+      // no-op
     }
     return [];
   }
 
   // ── GET BOOKING BY ID ──
+  // GET /booking/:bookingId  [AUTH]
+  // Returns: Map<String, dynamic>? (detail booking milik user)
   static Future<Map<String, dynamic>?> getBookingById(String bookingId) async {
     try {
       final headers = await _authHeaders(json: false);
@@ -462,7 +903,6 @@ class ApiService {
         Uri.parse("$baseUrl/booking/$bookingId"),
         headers: headers,
       );
-      print("GET BOOKING BY ID STATUS: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -474,13 +914,104 @@ class ApiService {
         }
       }
     } on SocketException {
-      print(
-        "GET BOOKING BY ID ERROR: Tidak ada koneksi internet / Server Down",
-      );
+      // no-op
     } catch (e) {
-      print("GET BOOKING BY ID ERROR: $e");
+      // no-op
     }
     return null;
+  }
+
+  // ── GET HISTORY BOOKINGS ──  [ADMIN]
+  // GET /booking/history
+  // Returns: List<dynamic> (semua booking dari semua user)
+  static Future<List<dynamic>> getHistoryBookings() async {
+    try {
+      final headers = await _authHeaders(json: false);
+      final response = await _client.get(
+        Uri.parse("$baseUrl/booking/history"),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['data'] != null) {
+          final inner = data['data'];
+          if (inner is Map && inner['booking'] != null) {
+            return List<dynamic>.from(inner['booking']);
+          }
+        }
+      }
+    } on SocketException {
+      // no-op
+    } catch (e) {
+      // no-op
+    }
+    return [];
+  }
+
+  // ── GET HISTORY BOOKING BY ID ──  [ADMIN]
+  // GET /booking/history/:bookingId
+  // Returns: Map<String, dynamic>? (detail booking siapapun)
+  static Future<Map<String, dynamic>?> getHistoryBookingById(
+    String bookingId,
+  ) async {
+    try {
+      final headers = await _authHeaders(json: false);
+      final response = await _client.get(
+        Uri.parse("$baseUrl/booking/history/$bookingId"),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data['data'] != null) {
+          final inner = data['data'];
+          if (inner is Map && inner['booking'] != null) {
+            return Map<String, dynamic>.from(inner['booking']);
+          }
+        }
+      }
+    } on SocketException {
+      // no-op
+    } catch (e) {
+      // no-op
+    }
+    return null;
+  }
+
+  // ── DELETE BOOKING ──  [ADMIN]
+  // DELETE /booking/history/:bookingId
+  // Returns: { success, message }
+  static Future<Map<String, dynamic>> deleteBooking(String bookingId) async {
+    try {
+      final headers = await _authHeaders(json: false);
+      final response = await _client.delete(
+        Uri.parse("$baseUrl/booking/history/$bookingId"),
+        headers: headers,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Booking berhasil dihapus",
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ?? data["error"] ?? "Gagal menghapus booking",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
   }
 
   // ═══════════════════════════════════════════════════
@@ -488,6 +1019,11 @@ class ApiService {
   // ═══════════════════════════════════════════════════
 
   // ── UPLOAD PAYMENT PROOF ──
+  // POST /payment/:bookingId  [AUTH]  multipart/form-data
+  // Fields : payment_method (string)
+  // File   : payment_proof (JPG / PNG / WEBP, maks 5MB)
+  // Efek   : Status booking → PENDING_VERIFICATION, email dikirim ke user
+  // Returns: { success, message, data? }
   static Future<Map<String, dynamic>> uploadPaymentProof({
     required String bookingId,
     required String paymentMethod,
@@ -507,7 +1043,7 @@ class ApiService {
       request.fields['payment_method'] = paymentMethod;
 
       final String extension = imageFile.path.split('.').last.toLowerCase();
-      MediaType contentType;
+      final MediaType contentType;
       if (extension == 'png') {
         contentType = MediaType('image', 'png');
       } else if (extension == 'webp') {
@@ -526,23 +1062,15 @@ class ApiService {
 
       final streamed = await _client.send(request);
       final response = await http.Response.fromStream(streamed);
-
-      print("UPLOAD PAYMENT STATUS: ${response.statusCode}");
-      print("UPLOAD PAYMENT BODY: ${response.body}");
-
-      // Decode JSON respons dari backend
       final data = jsonDecode(response.body);
 
-      // Tangkap respons sukses (200 atau 201)
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {
           "success": true,
-          "message":
-              data["message"] ?? data["status"] ?? "Bukti berhasil diunggah",
+          "message": data["message"] ?? "Bukti pembayaran berhasil diunggah",
           "data": data,
         };
       } else {
-        // Tangkap respons gagal (termasuk status 400 - File kebesaran)
         return {
           "success": false,
           "message":
@@ -550,13 +1078,11 @@ class ApiService {
         };
       }
     } on SocketException {
-      print("UPLOAD PAYMENT ERROR: Tidak ada koneksi internet / Server Down");
       return {
         "success": false,
-        "message": "Tidak ada koneksi internet. Silakan periksa jaringan Anda.",
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
       };
     } catch (e) {
-      print("UPLOAD PAYMENT ERROR: $e");
       return {
         "success": false,
         "message": "Terjadi kesalahan sistem saat mengunggah file.",
@@ -565,28 +1091,122 @@ class ApiService {
   }
 
   // ── GET PAYMENT PROOF ──
-  static Future<Map<String, dynamic>?> getPaymentProof(String bookingId) async {
+  // GET /payment/:bookingId/proof  [AUTH – pemilik booking]
+  // Returns: { success, payment_proof?, payment_proof_url? }
+  static Future<Map<String, dynamic>> getPaymentProof(String bookingId) async {
     try {
       final headers = await _authHeaders(json: false);
       final response = await _client.get(
         Uri.parse("$baseUrl/payment/$bookingId/proof"),
         headers: headers,
       );
-      print("GET PAYMENT PROOF STATUS: ${response.statusCode}");
+
+      final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map && data['data'] != null) {
-          return Map<String, dynamic>.from(data['data']);
-        }
+        return {
+          "success": true,
+          "payment_proof": data["data"]?["payment_proof"],
+          "payment_proof_url": data["data"]?["payment_proof_url"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["message"] ??
+              data["error"] ??
+              "Gagal mengambil bukti pembayaran",
+        };
       }
     } on SocketException {
-      print(
-        "GET PAYMENT PROOF ERROR: Tidak ada koneksi internet / Server Down",
-      );
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
     } catch (e) {
-      print("GET PAYMENT PROOF ERROR: $e");
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
     }
-    return null;
+  }
+
+  // ── VERIFY PAYMENT ──  [ADMIN]
+  // PATCH /payment/verify/:bookingId
+  // Efek  : Status booking → PAID, QR Code tiket dikirim ke email user
+  // Returns: { success, message, data? }
+  static Future<Map<String, dynamic>> verifyPayment(String bookingId) async {
+    try {
+      final headers = await _authHeaders(json: false);
+      final response = await _client.patch(
+        Uri.parse("$baseUrl/payment/verify/$bookingId"),
+        headers: headers,
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Pembayaran berhasil diverifikasi",
+          "data": data["data"],
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["error"] ??
+              data["message"] ??
+              "Gagal memverifikasi pembayaran",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
+  }
+
+  // ── CANCEL PAYMENT ──  [ADMIN]
+  // PATCH /payment/cancel/:bookingId
+  // Body : reason (string, wajib) — alasan penolakan
+  // Efek : Status booking → CANCELLED, email penolakan dikirim ke user
+  // Returns: { success, message }
+  static Future<Map<String, dynamic>> cancelPayment({
+    required String bookingId,
+    required String reason,
+  }) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await _client.patch(
+        Uri.parse("$baseUrl/payment/cancel/$bookingId"),
+        headers: headers,
+        body: jsonEncode({"reason": reason}),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Pembayaran berhasil dibatalkan",
+        };
+      } else {
+        return {
+          "success": false,
+          "message":
+              data["error"] ??
+              data["message"] ??
+              "Gagal membatalkan pembayaran",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {"success": false, "message": "Terjadi kesalahan sistem."};
+    }
   }
 }

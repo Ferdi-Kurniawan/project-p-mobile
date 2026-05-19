@@ -4,6 +4,7 @@ import {
   getHistoryBookings,
   getHistoryBookingById,
   getBookingById,
+  deleteBookingById,
 } from "../booking/booking.controller.js";
 import cartController from "../cart/cart.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -19,6 +20,12 @@ routerBooking.get(
   authMiddleware(["ADMIN"]),
   getHistoryBookingById,
 );
+routerBooking.delete(
+  "/history/:bookingId",
+  authMiddleware(["ADMIN"]),
+  deleteBookingById,
+);
+
 routerBooking.post("/add-item", authMiddleware([]), cartController.addItem);
 routerBooking.get("/cart", authMiddleware([]), cartController.getCart);
 routerBooking.post(

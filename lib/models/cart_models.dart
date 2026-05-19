@@ -4,8 +4,6 @@ import 'package:flutter_application_2/services/api_service.dart';
 class CartItem {
   final String productId;
   final String name;
-  final String loc;
-  final String img;
   final String harga;
   final String kategori;
   final DateTime? addedAt;
@@ -14,8 +12,6 @@ class CartItem {
   CartItem({
     required this.productId,
     required this.name,
-    required this.loc,
-    required this.img,
     required this.harga,
     required this.kategori,
     this.quantity = 1,
@@ -46,8 +42,6 @@ class CartModel extends ChangeNotifier {
           CartItem(
             productId: (data['productId'] ?? '').toString(),
             name: data['name']?.toString() ?? 'Tiket Wisata',
-            loc: data['loc']?.toString() ?? 'Lokasi tidak diketahui',
-            img: data['img']?.toString() ?? '',
             harga: (data['price'] ?? data['harga'] ?? '0').toString(),
             kategori: data['kategori']?.toString() ?? 'Tiket',
             quantity: data['quantity'] ?? 1,
@@ -79,8 +73,6 @@ class CartModel extends ChangeNotifier {
           CartItem(
             productId: pId,
             name: data['name'] ?? '',
-            loc: data['loc'] ?? 'Lokasi tidak diketahui',
-            img: data['img'] ?? '',
             harga: data['hargaNum'] ?? '0',
             kategori: data['kategori'] ?? 'Tiket',
             quantity: qty,
