@@ -825,11 +825,13 @@ class _ProfilePageState extends State<ProfilePage>
                   Icons.help_outline_rounded,
                   "Bantuan & FAQ",
                   subtitle: "Pusat bantuan pengguna",
+                  onTap: () => _showFaqDialog(),
                 ),
                 _buildMenuCard(
                   Icons.info_outline_rounded,
                   "Tentang Aplikasi",
                   subtitle: "Versi 1.0.0",
+                  onTap: () => _showAboutDialog(),
                 ),
                 _buildMenuCard(
                   Icons.logout_rounded,
@@ -931,6 +933,391 @@ class _ProfilePageState extends State<ProfilePage>
           color: Colors.black54,
           letterSpacing: 1.6,
         ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // POPUP: Bantuan & FAQ
+  // ─────────────────────────────────────────────
+  void _showFaqDialog() {
+    final List<Map<String, String>> faqs = [
+      {
+        'q': 'Bagaimana cara memesan tiket wisata?',
+        'a':
+            'Pilih destinasi wisata yang kamu inginkan, lalu klik tombol "Pesan Tiket". Isi data pemesan dan lakukan pembayaran sesuai instruksi.',
+      },
+      {
+        'q': 'Bagaimana cara melihat riwayat pembelian tiket?',
+        'a':
+            'Kamu bisa melihat riwayat tiket melalui menu "Riwayat Tiket" di halaman Profil ini.',
+      },
+      {
+        'q': 'Apakah tiket yang sudah dibeli bisa dibatalkan?',
+        'a':
+            'Pembatalan tiket dapat dilakukan maksimal 24 jam sebelum tanggal kunjungan. Hubungi tim kami melalui layanan pelanggan untuk proses pembatalan.',
+      },
+      {
+        'q': 'Bagaimana cara mengubah data profil saya?',
+        'a':
+            'Masuk ke menu "Edit Profil" pada halaman ini, perbarui informasi yang diinginkan, lalu klik "Simpan".',
+      },
+      {
+        'q': 'Apa yang harus dilakukan jika lupa password?',
+        'a':
+            'Klik tombol "Lupa Password" di halaman Login, lalu ikuti instruksi yang dikirimkan ke email kamu untuk mereset password.',
+      },
+    ];
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              decoration: BoxDecoration(
+                color: teal500.withOpacity(0.06),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: teal500.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.help_outline_rounded,
+                      color: teal500,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Bantuan & FAQ',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: charcoal,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // FAQ list
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.52,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Column(
+                  children: faqs.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final item = entry.value;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7F9FA),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Theme(
+                        data: Theme.of(ctx).copyWith(
+                          dividerColor: Colors.transparent,
+                        ),
+                        child: ExpansionTile(
+                          tilePadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 2,
+                          ),
+                          childrenPadding: const EdgeInsets.fromLTRB(
+                            14,
+                            0,
+                            14,
+                            14,
+                          ),
+                          leading: Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: teal500,
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${idx + 1}',
+                                style: const TextStyle(
+                                  color: white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            item['q']!,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: charcoal,
+                            ),
+                          ),
+                          iconColor: teal500,
+                          collapsedIconColor: Colors.black38,
+                          children: [
+                            Text(
+                              item['a']!,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF6B7E8D),
+                                height: 1.55,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+
+            // Footer button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: teal500,
+                    foregroundColor: white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // POPUP: Tentang Aplikasi
+  // ─────────────────────────────────────────────
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon aplikasi
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [teal400, teal500],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: teal500.withOpacity(0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.travel_explore_rounded,
+                  color: white,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Nama & versi
+              const Text(
+                'Wisata App',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: charcoal,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: teal500.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Versi 1.0.0',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: teal500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Deskripsi
+              const Text(
+                'Aplikasi pemandu wisata lokal yang memudahkan kamu menemukan, memesan, dan menikmati berbagai destinasi wisata terbaik di sekitarmu.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF6B7E8D),
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Divider info
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F9FA),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    _buildAboutRow(
+                      Icons.code_rounded,
+                      'Dikembangkan oleh',
+                      'Tim Developer',
+                    ),
+                    Divider(
+                      height: 1,
+                      color: const Color(0xFFE2E8F0),
+                      indent: 50,
+                    ),
+                    _buildAboutRow(
+                      Icons.update_rounded,
+                      'Terakhir diperbarui',
+                      'Januari 2025',
+                    ),
+                    Divider(
+                      height: 1,
+                      color: const Color(0xFFE2E8F0),
+                      indent: 50,
+                    ),
+                    _buildAboutRow(
+                      Icons.gavel_rounded,
+                      'Lisensi',
+                      'MIT License',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Tombol tutup
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: teal500,
+                    foregroundColor: white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAboutRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: teal500),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF6B7E8D),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: charcoal,
+            ),
+          ),
+        ],
       ),
     );
   }

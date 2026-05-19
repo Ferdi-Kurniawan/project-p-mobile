@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.9:3001";
+  static const String baseUrl = "http://192.168.1.9:3000";
   static Map<String, dynamic>? userData;
   static final http.Client _client = http.Client();
 

@@ -8,6 +8,8 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSCameraUsageDescription</key>
+    <string>Dibutuhkan untuk scan QR tiket wisata</string>
 	<key>CFBundleDisplayName</key>
 	<string>Flutter Application 2</string>
 	<key>CFBundleExecutable</key>
