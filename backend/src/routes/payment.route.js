@@ -6,6 +6,7 @@ import {
   getPaymentProof,
   verifyPaymentAdmin,
   cancelPaymentAdmin,
+  checkInTicket
 } from "../payment/payment.controller.js";
 import {
   paymentSchema,
@@ -35,6 +36,12 @@ routerPayment.patch(
   validate(cancelPaymentSchema),
   cancelPaymentAdmin,
 );
+
+routerPayment.patch(
+  "/check-in",
+  authMiddleware(["ADMIN"]),
+  checkInTicket
+)
 
 routerPayment.get("/:bookingId/proof", authMiddleware([]), getPaymentProof);
 

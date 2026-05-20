@@ -1209,4 +1209,44 @@ class ApiService {
       return {"success": false, "message": "Terjadi kesalahan sistem."};
     }
   }
+
+// ── Check In Scan QR code ──  [ADMIN]
+  static Future<Map<String, dynamic>> checkIn({required String ticketCode}) async {
+    try {
+      final headers = await _authHeaders();
+      
+      // Ensure your headers include 'Content-Type': 'application/json'
+      final response = await _client.patch(
+        Uri.parse("$baseUrl/booking/check-in"),
+        headers: headers,
+        body: jsonEncode({"ticket_code": ticketCode}),
+      );
+
+      // Extract and parse the response body
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": data["message"] ?? "Verifikasi Berhasil dilakukan",
+        };
+      } else {
+        return {
+          "success": false,
+          "message": data["error"] ?? data["message"] ?? "Tiket tidak valid",
+        };
+      }
+    } on SocketException {
+      return {
+        "success": false,
+        "message": "Gagal terhubung ke server. Periksa koneksi internet Anda.",
+      };
+    } catch (e) {
+      return {
+        "success": false, 
+        "message": "Terjadi kesalahan sistem: ${e.toString()}"
+      };
+    }
+  }
 }
+
