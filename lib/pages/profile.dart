@@ -776,11 +776,6 @@ class _ProfilePageState extends State<ProfilePage>
 
                 _buildSectionHeader("Aktivitas"),
                 _buildMenuCard(
-                  Icons.favorite_outline,
-                  "Wisata Favorit",
-                  subtitle: "Lihat daftar favorit kamu",
-                ),
-                _buildMenuCard(
                   Icons.receipt_long_outlined,
                   "Riwayat Tiket",
                   subtitle: "Cek tiket yang pernah dibeli",
@@ -800,23 +795,6 @@ class _ProfilePageState extends State<ProfilePage>
                   "Ubah Password",
                   subtitle: "Perbarui kata sandi kamu",
                   onTap: () => _showChangePasswordDialog(),
-                ),
-
-                const SizedBox(height: 8),
-                _buildSectionHeader("Preferensi"),
-                _buildToggleCard(
-                  icon: Icons.notifications_outlined,
-                  label: "Notifikasi",
-                  subtitle: "Aktifkan pemberitahuan",
-                  value: _notifEnabled,
-                  onChanged: (val) => setState(() => _notifEnabled = val),
-                ),
-                _buildToggleCard(
-                  icon: Icons.dark_mode_outlined,
-                  label: "Mode Gelap",
-                  subtitle: "Ubah tema tampilan",
-                  value: _darkMode,
-                  onChanged: (val) => setState(() => _darkMode = val),
                 ),
 
                 const SizedBox(height: 8),
@@ -1053,9 +1031,9 @@ class _ProfilePageState extends State<ProfilePage>
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       child: Theme(
-                        data: Theme.of(ctx).copyWith(
-                          dividerColor: Colors.transparent,
-                        ),
+                        data: Theme.of(
+                          ctx,
+                        ).copyWith(dividerColor: Colors.transparent),
                         child: ExpansionTile(
                           tilePadding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -1303,10 +1281,7 @@ class _ProfilePageState extends State<ProfilePage>
           const SizedBox(width: 12),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF6B7E8D),
-            ),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7E8D)),
           ),
           const Spacer(),
           Text(

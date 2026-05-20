@@ -5,6 +5,7 @@ import {
   getHistoryBookingById,
   getBookingById,
   deleteBookingById,
+  searchBooking,
 } from "../booking/booking.controller.js";
 import cartController from "../cart/cart.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -34,6 +35,8 @@ routerBooking.post(
   cartController.removeItem,
 );
 routerBooking.post("/clear-cart", authMiddleware([]), cartController.clearCart);
+
+routerBooking.get("/search", authMiddleware([]), searchBooking);
 
 routerBooking.get("/:bookingId", authMiddleware([]), getBookingById);
 

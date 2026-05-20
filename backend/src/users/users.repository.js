@@ -40,8 +40,8 @@ class UserRepository {
   async findAll() {
     return await this._prisma.user.findMany({
       include: {
-        bookings: true
-      }
+        bookings: true,
+      },
     });
   }
 
@@ -61,6 +61,25 @@ class UserRepository {
   async delete(id) {
     return await this._prisma.user.delete({
       where: { id },
+    });
+  }
+
+  async searchUsers(keyword) {
+    return await this._prisma.user.findMany({
+      where: {
+        OR: [
+          { fullname: { contains: keyword } },
+          { email: { contains: keyword } },
+        ],
+      },
+      // Keamanan: Pastikan password tidak ikut terkirim ke frontend
+      select: {
+        id: true,
+        fullname: true,
+        email: true,
+        phone: true,
+        role: true,
+      },
     });
   }
 }

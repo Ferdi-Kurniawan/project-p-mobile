@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.5:3000";
+  static const String baseUrl = "http://192.168.1.9:3001";
   static Map<String, dynamic>? userData;
   static final http.Client _client = http.Client();
 
@@ -1210,8 +1210,8 @@ class ApiService {
     }
   }
 
-// ── Check In Scan QR code ──  [ADMIN]
-   // ── CHECK IN via QR Scan ──  [ADMIN]
+  // ── Check In Scan QR code ──  [ADMIN]
+  // ── CHECK IN via QR Scan ──  [ADMIN]
   // PATCH /payment/check-in/:ticketCode
   //
   // FIX: ticketCode sekarang dikirim sebagai URL param (bukan body),
@@ -1222,21 +1222,26 @@ class ApiService {
     required String ticketCode,
   }) async {
     try {
-      final headers = await _authHeaders(json: false); // tidak perlu Content-Type JSON karena no body
- 
+      final headers = await _authHeaders(
+        json: false,
+      ); // tidak perlu Content-Type JSON karena no body
+
       final response = await _client.patch(
-        Uri.parse("$baseUrl/payment/check-in/$ticketCode"), // FIX: ticketCode di URL
+        Uri.parse(
+          "$baseUrl/payment/check-in/$ticketCode",
+        ), // FIX: ticketCode di URL
         headers: headers,
         // FIX: tidak ada body — data dikirim via path param
       );
- 
+
       final data = jsonDecode(response.body);
- 
+
       if (response.statusCode == 200) {
         return {
           "success": true,
           "message": data["message"] ?? "Verifikasi berhasil dilakukan",
-          "data": data["data"], // berisi booking_id, id, ticket_code, check_in_time
+          "data":
+              data["data"], // berisi booking_id, id, ticket_code, check_in_time
         };
       } else {
         return {
@@ -1256,5 +1261,44 @@ class ApiService {
       };
     }
   }
-}
 
+  static Future<List<dynamic>> searchBookings(String query) async {
+    try {
+      final headers = await _authHeaders(json: false);
+
+      // Memasukkan keyword ke dalam URL sebagai query string
+      final url = Uri.parse("$baseUrl/booking/search?q=$query");
+
+      final response = await _client.get(url, headers: headers);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        return data['data']['bookings'] ?? [];
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<List<dynamic>> searchUsers(String query) async {
+    try {
+      final headers = await _authHeaders(json: false);
+
+      // Kirim teks pencarian sebagai query parameter '?q='
+      final url = Uri.parse("$baseUrl/users/search?q=$query");
+
+      final response = await _client.get(url, headers: headers);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        return data['data']['users'] ?? [];
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+}

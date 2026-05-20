@@ -4,40 +4,32 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
 import '../helper/snackbar_helper.dart';
 
-// =====================================================================
-//  QRIS SCANNER PAGE  — Fixed version
-//  Fixes:
-//    1. Camera error handler (Device error code 4/5)
-//    2. Camera stop guard (prevent stop() on uninitialized camera)
-//    3. Torch & switchCamera guards
-//    4. _resetScan: restart hanya jika camera initialized
-//    5. _detailRow Expanded wrapper (text overflow)
-// =====================================================================
-
 class QrisScannerPage extends StatefulWidget {
   const QrisScannerPage({super.key});
-
   @override
   State<QrisScannerPage> createState() => _QrisScannerPageState();
 }
 
 class _QrisScannerPageState extends State<QrisScannerPage>
     with WidgetsBindingObserver {
-  static const teal500  = Color(0xFF319795);
-  static const teal400  = Color(0xFF4DB6AC);
+  static const teal500 = Color(0xFF319795);
+  static const teal400 = Color(0xFF4DB6AC);
   static const charcoal = Color(0xFF2D3748);
 
   late final MobileScannerController _camCtrl;
 
-  bool _torchOn     = false;
-  bool _scanning    = true;
-  bool _loadingData = false;
-  bool _cameraError = false; // FIX #1: track camera error state
+  bool _torchOn = false;
 
-  String?               _scannedRaw;
-  String?               _successMsg;
+  // FOKUS PENANGANAN DOUBLE SCAN: Flag state
+  bool _scanning = true;
+  bool _loadingData = false;
+
+  bool _cameraError = false;
+
+  String? _scannedRaw;
+  String? _successMsg;
   Map<String, dynamic>? _bookingData;
-  String?               _errorMsg;
+  String? _errorMsg;
 
   @override
   void initState() {
@@ -46,7 +38,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     WidgetsBinding.instance.addObserver(this);
   }
 
-  // FIX #1: Pisahkan inisialisasi kamera agar bisa di-retry
   void _initCamera() {
     _camCtrl = MobileScannerController(
       detectionSpeed: DetectionSpeed.noDuplicates,
@@ -65,7 +56,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // FIX #2: Guard isInitialized sebelum stop/start
     if (!_camCtrl.value.isInitialized) return;
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
@@ -75,7 +65,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     }
   }
 
-  // ── Ekstrak ticket code dari raw QR ──
   String? _parseTicketCode(String raw) {
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -89,22 +78,26 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     return trimmed.isNotEmpty ? trimmed : null;
   }
 
-  // ── Dipanggil setiap QR berhasil terbaca ──
+  // FOKUS PENANGANAN DOUBLE SCAN: Logika pada saat mendeteksi QR
   Future<void> _onDetect(BarcodeCapture capture) async {
+    // 1. Guard ketat: buang frame kamera jika sedang loading atau tidak scanning
     if (!_scanning || _loadingData) return;
+
     final barcode = capture.barcodes.firstOrNull;
     if (barcode?.rawValue == null) return;
 
     final raw = barcode!.rawValue!;
+
+    // 2. Langsung kunci state secara sinkron
     setState(() {
-      _scanning    = false;
-      _scannedRaw  = raw;
+      _scanning = false;
       _loadingData = true;
+      _scannedRaw = raw;
       _bookingData = null;
-      _errorMsg    = null;
+      _errorMsg = null;
     });
 
-    // FIX #2: Guard stop
+    // 3. Hentikan kamera untuk mencegah frame tambahan diproses
     if (_camCtrl.value.isInitialized) {
       await _camCtrl.stop();
     }
@@ -112,95 +105,83 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     final ticketCode = _parseTicketCode(raw);
     if (ticketCode == null) {
       setState(() {
-        _errorMsg    = 'QR tidak valid. Bukan format tiket wisata.';
+        _errorMsg = 'QR tidak valid. Bukan format tiket wisata.';
         _loadingData = false;
       });
       return;
     }
 
-    // 1. Check-In API → /payment/check-in/:ticketCode (param)
     final checkInResult = await ApiService.checkIn(ticketCode: ticketCode);
     if (!mounted) return;
 
-    // 2. Tampilkan SnackBar (selalu, seperti semula)
     CustomSnackBar.show(
       context,
       checkInResult["message"] ?? "Memproses tiket...",
       checkInResult["success"] ?? false,
     );
 
-    // Cek apakah check-in gagal — toleran terhadap berbagai format response
     final rawSuccess = checkInResult["success"];
-    final bool checkInSuccess = rawSuccess == true ||
+    final bool checkInSuccess =
+        rawSuccess == true ||
         rawSuccess == 1 ||
         rawSuccess?.toString().toLowerCase() == 'true';
 
     if (!checkInSuccess) {
       setState(() {
-        _errorMsg    = checkInResult["message"] ?? 'Gagal memverifikasi tiket.';
+        _errorMsg = checkInResult["message"] ?? 'Gagal memverifikasi tiket.';
         _loadingData = false;
       });
       return;
     }
 
-    // 3. Check-in sukses → tampilkan pesan berhasil
     if (!mounted) return;
+
+    // 4. Buka loading saat proses selesai
     setState(() {
-      _successMsg  = checkInResult["message"]?.toString();
+      _successMsg = checkInResult["message"]?.toString();
       _bookingData = <String, dynamic>{};
       _loadingData = false;
     });
   }
 
-  // ── Reset → scan ulang ──
   void _resetScan() {
     setState(() {
-      _scanning    = true;
-      _scannedRaw  = null;
+      _scanning = true;
+      _scannedRaw = null;
       _bookingData = null;
-      _errorMsg    = null;
-      _successMsg  = null;
+      _errorMsg = null;
+      _successMsg = null;
       _loadingData = false;
       _cameraError = false;
     });
-    // FIX #2: Guard start
     if (_camCtrl.value.isInitialized) {
       _camCtrl.start();
     }
   }
 
-  // FIX #1: Restart kamera setelah error hardware
   void _retryCameraAfterError() {
     _camCtrl.dispose();
     _initCamera();
     setState(() {
-      _scanning    = true;
-      _scannedRaw  = null;
+      _scanning = true;
+      _scannedRaw = null;
       _bookingData = null;
-      _errorMsg    = null;
-      _successMsg  = null;
+      _errorMsg = null;
+      _successMsg = null;
       _loadingData = false;
     });
   }
 
-  // ── Toggle torch dengan guard ──
   void _toggleTorch() {
-    // FIX #3: Jangan toggle kalau kamera belum ready
     if (!_camCtrl.value.isInitialized) return;
     _camCtrl.toggleTorch();
     setState(() => _torchOn = !_torchOn);
   }
 
-  // ── Switch camera dengan guard ──
   void _switchCamera() {
-    // FIX #3: Jangan switch kalau kamera belum ready
     if (!_camCtrl.value.isInitialized) return;
     _camCtrl.switchCamera();
   }
-
-  // =====================================================================
-  //  BUILD
-  // =====================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +189,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // FIX #1: errorBuilder untuk handle Device error code 4/5
           MobileScanner(
             controller: _camCtrl,
             onDetect: _onDetect,
@@ -219,54 +199,68 @@ class _QrisScannerPageState extends State<QrisScannerPage>
           if (!_cameraError) _buildOverlay(),
           _buildTopBar(context),
           if (!_cameraError) _buildSideButtons(),
-          if (_loadingData || _bookingData != null || _errorMsg != null)
+
+          // Result panel hanya dimunculkan jika BUKAN loading dan ada data/error
+          if (!_loadingData && (_bookingData != null || _errorMsg != null))
             _buildResultPanel(),
+
+          // FOKUS PENANGANAN DOUBLE SCAN: Full-screen block
+          // Menutup seluruh layar saat loading agar user tidak bisa memicu aksi apapun
+          if (_loadingData)
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: Colors.black.withOpacity(0.6), // Layar sedikit digelapkan
+              child: const Center(
+                child: CircularProgressIndicator(color: teal500),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // ── Overlay viewfinder ──
   Widget _buildOverlay() {
     const cut = 260.0;
-    return LayoutBuilder(builder: (context, box) {
-      final cx = box.maxWidth / 2;
-      final cy = box.maxHeight / 2 - 40;
-      final l  = cx - cut / 2;
-      final t  = cy - cut / 2;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final cx = box.maxWidth / 2;
+        final cy = box.maxHeight / 2 - 40;
+        final l = cx - cut / 2;
+        final t = cy - cut / 2;
 
-      return Stack(
-        children: [
-          CustomPaint(
-            size: Size(box.maxWidth, box.maxHeight),
-            painter: _OverlayPainter(cutRect: Rect.fromLTWH(l, t, cut, cut)),
-          ),
-          ..._corners(l, t, cut),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: t + cut + 20,
-            child: const Text(
-              'Arahkan kamera ke QR tiket',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+        return Stack(
+          children: [
+            CustomPaint(
+              size: Size(box.maxWidth, box.maxHeight),
+              painter: _OverlayPainter(cutRect: Rect.fromLTWH(l, t, cut, cut)),
+            ),
+            ..._corners(l, t, cut),
+            Positioned(
+              left: 0,
+              right: 0,
+              top: t + cut + 20,
+              child: const Text(
+                'Arahkan kamera ke QR tiket',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
-        ],
-      );
-    });
+          ],
+        );
+      },
+    );
   }
 
   List<Widget> _corners(double l, double t, double size) {
-    const len   = 28.0;
+    const len = 28.0;
     const thick = 3.5;
-    const r     = 6.0;
+    const r = 6.0;
     final color = teal400;
-
     Widget corner({
       required double left,
       required double top,
@@ -291,14 +285,18 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     }
 
     return [
-      corner(left: l,              top: t),
-      corner(left: l + size - len, top: t,              flipH: true),
-      corner(left: l,              top: t + size - len, flipV: true),
-      corner(left: l + size - len, top: t + size - len, flipH: true, flipV: true),
+      corner(left: l, top: t),
+      corner(left: l + size - len, top: t, flipH: true),
+      corner(left: l, top: t + size - len, flipV: true),
+      corner(
+        left: l + size - len,
+        top: t + size - len,
+        flipH: true,
+        flipV: true,
+      ),
     ];
   }
 
-  // ── Top bar ──
   Widget _buildTopBar(BuildContext context) {
     return SafeArea(
       child: Padding(
@@ -307,12 +305,16 @@ class _QrisScannerPageState extends State<QrisScannerPage>
           children: [
             IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
               style: IconButton.styleFrom(
                 backgroundColor: Colors.black38,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -331,7 +333,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     );
   }
 
-  // ── Tombol torch & flip kamera ──
   Widget _buildSideButtons() {
     return Positioned(
       bottom: 220,
@@ -341,13 +342,13 @@ class _QrisScannerPageState extends State<QrisScannerPage>
           _iconBtn(
             icon: _torchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
             active: _torchOn,
-            onTap: _toggleTorch, // FIX #3: sudah ada guard di dalam
+            onTap: _toggleTorch,
             tooltip: 'Senter',
           ),
           const SizedBox(height: 12),
           _iconBtn(
             icon: Icons.flip_camera_ios_rounded,
-            onTap: _switchCamera, // FIX #3: sudah ada guard di dalam
+            onTap: _switchCamera,
             tooltip: 'Balik kamera',
           ),
         ],
@@ -384,7 +385,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     );
   }
 
-  // ── FIX #1: Camera error widget ──
   Widget _buildCameraError(String errorCode) {
     return Container(
       color: Colors.black,
@@ -401,37 +401,49 @@ class _QrisScannerPageState extends State<QrisScannerPage>
                   color: Colors.red.shade900.withOpacity(0.3),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.videocam_off_rounded,
-                    color: Colors.red.shade300, size: 36),
+                child: Icon(
+                  Icons.videocam_off_rounded,
+                  color: Colors.red.shade300,
+                  size: 36,
+                ),
               ),
               const SizedBox(height: 20),
               const Text(
                 'Kamera Tidak Tersedia',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700),
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Terjadi error pada kamera ($errorCode).\nPastikan izin kamera sudah diberikan.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    color: Colors.white54, fontSize: 13, height: 1.5),
+                  color: Colors.white54,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 28),
               ElevatedButton.icon(
                 onPressed: _retryCameraAfterError,
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Coba Lagi',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                label: const Text(
+                  'Coba Lagi',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: teal500,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 28, vertical: 13),
+                    horizontal: 28,
+                    vertical: 13,
+                  ),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -442,7 +454,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     );
   }
 
-  // ── Panel hasil / loading / error ──
   Widget _buildResultPanel() {
     return DraggableScrollableSheet(
       initialChildSize: 0.38,
@@ -471,7 +482,6 @@ class _QrisScannerPageState extends State<QrisScannerPage>
                     ),
                   ),
                 ),
-                if (_loadingData) _buildLoading(),
                 if (_errorMsg != null) _buildError(),
                 if (_bookingData != null) _buildBookingCard(),
               ],
@@ -482,51 +492,40 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     );
   }
 
-  Widget _buildLoading() {
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        const CircularProgressIndicator(color: teal500),
-        const SizedBox(height: 16),
-        Text('Memproses tiket...',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
-        const SizedBox(height: 8),
-        Text(
-          _scannedRaw ?? '',
-          style: const TextStyle(fontSize: 11, color: Colors.black38),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-
   Widget _buildError() {
     return Column(
       children: [
         Container(
           width: 64,
           height: 64,
-          decoration:
-              BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
-          child: Icon(Icons.qr_code_2_rounded,
-              color: Colors.red.shade400, size: 34),
+          decoration: BoxDecoration(
+            color: Colors.red.shade50,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.qr_code_2_rounded,
+            color: Colors.red.shade400,
+            size: 34,
+          ),
         ),
         const SizedBox(height: 14),
         const Text(
           'Gagal Memproses Tiket',
           style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF2D3748)),
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF2D3748),
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           _errorMsg ?? '',
           textAlign: TextAlign.center,
           style: TextStyle(
-              fontSize: 13, color: Colors.grey.shade500, height: 1.5),
+            fontSize: 13,
+            color: Colors.grey.shade500,
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 20),
         _scanAgainBtn(),
@@ -555,16 +554,20 @@ class _QrisScannerPageState extends State<QrisScannerPage>
         const Text(
           'Check-in Berhasil!',
           style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: teal500),
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: teal500,
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           msg,
           textAlign: TextAlign.center,
           style: TextStyle(
-              fontSize: 13, color: Colors.grey.shade500, height: 1.5),
+            fontSize: 13,
+            color: Colors.grey.shade500,
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 20),
         _scanAgainBtn(),
@@ -574,18 +577,18 @@ class _QrisScannerPageState extends State<QrisScannerPage>
 
   Widget _statusBadge(String status) {
     const colors = {
-      'PENDING':              Color(0xFFF6AD55),
+      'PENDING': Color(0xFFF6AD55),
       'PENDING_VERIFICATION': Color(0xFF4299E1),
-      'PAID':                 Color(0xFF48BB78),
-      'CANCELLED':            Color(0xFFFC8181),
-      'COMPLETED':            Color(0xFF319795),
+      'PAID': Color(0xFF48BB78),
+      'CANCELLED': Color(0xFFFC8181),
+      'COMPLETED': Color(0xFF319795),
     };
     const labels = {
-      'PENDING':              'Menunggu Bayar',
+      'PENDING': 'Menunggu Bayar',
       'PENDING_VERIFICATION': 'Menunggu Verifikasi',
-      'PAID':                 'Lunas',
-      'CANCELLED':            'Dibatalkan',
-      'COMPLETED':            'Selesai',
+      'PAID': 'Lunas',
+      'CANCELLED': 'Dibatalkan',
+      'COMPLETED': 'Selesai',
     };
     final color = colors[status] ?? Colors.grey;
     return Container(
@@ -597,12 +600,14 @@ class _QrisScannerPageState extends State<QrisScannerPage>
       child: Text(
         labels[status] ?? status,
         style: TextStyle(
-            fontSize: 12, fontWeight: FontWeight.w700, color: color),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
 
-  // FIX #4: Bungkus value Text dengan Expanded agar tidak overflow
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -619,20 +624,22 @@ class _QrisScannerPageState extends State<QrisScannerPage>
             child: Icon(icon, color: teal500, size: 17),
           ),
           const SizedBox(width: 12),
-          Expanded( // FIX #4: Expanded untuk mencegah overflow teks panjang
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.black38)),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, color: Colors.black38),
+                ),
                 Text(
                   value,
                   style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: charcoal),
-                  overflow: TextOverflow.ellipsis, // FIX #4
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: charcoal,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                   maxLines: 2,
                 ),
               ],
@@ -649,14 +656,17 @@ class _QrisScannerPageState extends State<QrisScannerPage>
       child: ElevatedButton.icon(
         onPressed: _resetScan,
         icon: const Icon(Icons.qr_code_scanner_rounded),
-        label: const Text('Scan Tiket Lagi',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        label: const Text(
+          'Scan Tiket Lagi',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: teal500,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 13),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           elevation: 0,
         ),
       ),
@@ -701,7 +711,7 @@ class _OverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.black.withOpacity(0.65);
-    final full  = Rect.fromLTWH(0, 0, size.width, size.height);
+    final full = Rect.fromLTWH(0, 0, size.width, size.height);
     final rrect = RRect.fromRectAndRadius(cutRect, const Radius.circular(16));
 
     canvas.saveLayer(full, Paint());
@@ -718,24 +728,23 @@ class _CornerPainter extends CustomPainter {
   final Color color;
   final double thick;
   final double r;
-
-  const _CornerPainter(
-      {required this.color, required this.thick, required this.r});
-
+  const _CornerPainter({
+    required this.color,
+    required this.thick,
+    required this.r,
+  });
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color       = color
+      ..color = color
       ..strokeWidth = thick
-      ..strokeCap   = StrokeCap.round
-      ..style       = PaintingStyle.stroke;
-
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
     final path = Path()
       ..moveTo(0, size.height * 0.5)
       ..lineTo(0, r)
       ..arcToPoint(Offset(r, 0), radius: Radius.circular(r), clockwise: true)
       ..lineTo(size.width * 0.5, 0);
-
     canvas.drawPath(path, paint);
   }
 

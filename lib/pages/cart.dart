@@ -32,6 +32,11 @@ class _CartPageState extends State<CartPage>
   DateTime? _tanggalMulai;
   DateTime? _tanggalSelesai;
 
+  // ── GUARD FLAGS — mencegah double-tap ──
+  bool _isDeletingItem = false;
+  bool _isClearingCart = false;
+  bool _isCheckoutOpen = false;
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
 
@@ -43,7 +48,7 @@ class _CartPageState extends State<CartPage>
   void initState() {
     super.initState();
     CartModel.instance.addListener(_refresh);
-    _syncCartFromServer(); // ← logika asli tidak diubah
+    _syncCartFromServer();
 
     _pulseController = AnimationController(
       vsync: this,
@@ -54,12 +59,9 @@ class _CartPageState extends State<CartPage>
     );
   }
 
-  // ── TIDAK DIUBAH ──
   Future<void> _syncCartFromServer() async {
     try {
       final response = await ApiService.getCart();
-
-      // Ambil list 'cart' langsung dari respons Map
       if (response['success'] == true && response['cart'] != null) {
         CartModel.instance.updateItemsFromServer(response['cart']);
       }
@@ -75,7 +77,6 @@ class _CartPageState extends State<CartPage>
     super.dispose();
   }
 
-  // ── TIDAK DIUBAH ──
   String _formatRupiah(int amount) {
     final str = amount.toString();
     final buffer = StringBuffer();
@@ -87,11 +88,11 @@ class _CartPageState extends State<CartPage>
   }
 
   // ════════════════════════════════════════════════════════
-  //  _checkout — TIDAK DIUBAH (logika + navigasi asli)
-  //  Hanya warna UI dalam sheet yang disesuaikan ke teal
+  //  _checkout — guard _isCheckoutOpen mencegah buka sheet dua kali
   // ════════════════════════════════════════════════════════
   void _checkout() {
-    if (CartModel.instance.items.isEmpty) return;
+    if (CartModel.instance.items.isEmpty || _isCheckoutOpen) return;
+    _isCheckoutOpen = true;
 
     DateTime? tanggalMulai = _tanggalMulai;
     DateTime? tanggalSelesai = _tanggalSelesai;
@@ -208,7 +209,6 @@ class _CartPageState extends State<CartPage>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Handle bar
                   Container(
                     width: 40,
                     height: 4,
@@ -218,8 +218,6 @@ class _CartPageState extends State<CartPage>
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Icon konfirmasi
                   Container(
                     width: 72,
                     height: 72,
@@ -234,7 +232,6 @@ class _CartPageState extends State<CartPage>
                     ),
                   ),
                   const SizedBox(height: 16),
-
                   const Text(
                     "Konfirmasi Pesanan",
                     style: TextStyle(
@@ -269,8 +266,6 @@ class _CartPageState extends State<CartPage>
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // ── Form Tanggal ──
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -413,7 +408,6 @@ class _CartPageState extends State<CartPage>
                             ),
                           ],
                         ),
-
                         if (durasi > 0) ...[
                           const SizedBox(height: 10),
                           Container(
@@ -459,8 +453,6 @@ class _CartPageState extends State<CartPage>
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Item list dalam sheet
                   ...CartModel.instance.items.map(
                     (item) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -511,11 +503,9 @@ class _CartPageState extends State<CartPage>
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 8),
                   Divider(color: _T.divider, thickness: 1),
                   const SizedBox(height: 8),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -546,8 +536,6 @@ class _CartPageState extends State<CartPage>
                     ],
                   ),
                   const SizedBox(height: 20),
-
-                  // CTA Bayar — logika asli TIDAK DIUBAH
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -620,7 +608,10 @@ class _CartPageState extends State<CartPage>
           );
         },
       ),
-    );
+    ).whenComplete(() {
+      // ── Reset flag setelah sheet ditutup (apapun caranya) ──
+      _isCheckoutOpen = false;
+    });
   }
 
   // ════════════════════════════════════════════════════════
@@ -639,10 +630,9 @@ class _CartPageState extends State<CartPage>
 
     return Scaffold(
       backgroundColor: _T.bgPage,
-      bottomNavigationBar: null, // ← TIDAK DIUBAH: sesuai kode asli
+      bottomNavigationBar: null,
       body: Stack(
         children: [
-          // ── Teal gradient header ──
           Positioned(
             top: 0,
             left: 0,
@@ -662,8 +652,6 @@ class _CartPageState extends State<CartPage>
               ),
             ),
           ),
-
-          // ── Dekorasi lingkaran header ──
           Positioned(
             top: -40,
             right: -30,
@@ -700,11 +688,9 @@ class _CartPageState extends State<CartPage>
               ),
             ),
           ),
-
           SafeArea(
             child: Column(
               children: [
-                // ── Header ──
                 Padding(
                   padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
                   child: Row(
@@ -744,90 +730,109 @@ class _CartPageState extends State<CartPage>
                         ],
                       ),
 
-                      // Tombol hapus semua — logika asli TIDAK DIUBAH
+                      // ── Tombol hapus semua — guard _isClearingCart ──
                       if (items.isNotEmpty)
                         GestureDetector(
-                          onTap: () {
-                            HapticFeedback.mediumImpact();
-                            showDialog(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                title: const Text(
-                                  "Kosongkan Keranjang?",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 16,
-                                    color: _T.textHead,
-                                  ),
-                                ),
-                                content: const Text(
-                                  "Semua tiket di keranjang akan dihapus.",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: _T.textBody,
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text(
-                                      "Batal",
-                                      style: TextStyle(
-                                        color: _T.textMuted,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      // 1. Tutup dialog pop-up terlebih dahulu agar UI terasa responsif
-                                      Navigator.pop(context);
-
-                                      // 2. Panggil API dan tunggu hasilnya
-                                      final result = await CartModel.instance
-                                          .clear();
-
-                                      if (mounted) {
-                                        final bool isSuccess =
-                                            result['success'] == true;
-                                        // Gunakan pesan fallback jika server tidak mengirimkan 'message'
-                                        final String msg =
-                                            result['message'] != null
-                                            ? result['message'].toString()
-                                            : (isSuccess
-                                                  ? "Keranjang berhasil dikosongkan."
-                                                  : "Gagal mengosongkan keranjang.");
-
-                                        // 3. Tampilkan Notifikasi Atas
-                                        CustomSnackBar.show(
-                                          context,
-                                          msg,
-                                          isSuccess,
-                                        );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red.shade400,
+                          onTap: _isClearingCart
+                              ? null // block saat sedang proses
+                              : () {
+                                  HapticFeedback.mediumImpact();
+                                  showDialog(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                      elevation: 0,
-                                    ),
-                                    child: const Text(
-                                      "Hapus",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
+                                      title: const Text(
+                                        "Kosongkan Keranjang?",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 16,
+                                          color: _T.textHead,
+                                        ),
                                       ),
+                                      content: const Text(
+                                        "Semua tiket di keranjang akan dihapus.",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: _T.textBody,
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: const Text(
+                                            "Batal",
+                                            style: TextStyle(
+                                              color: _T.textMuted,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        ElevatedButton(
+                                          // ── GUARD: disable tombol saat sedang proses ──
+                                          onPressed: _isClearingCart
+                                              ? null
+                                              : () async {
+                                                  Navigator.pop(context);
+                                                  setState(
+                                                    () =>
+                                                        _isClearingCart = true,
+                                                  );
+                                                  try {
+                                                    final result =
+                                                        await CartModel.instance
+                                                            .clear();
+                                                    if (mounted) {
+                                                      final bool isSuccess =
+                                                          result['success'] ==
+                                                          true;
+                                                      final String msg =
+                                                          result['message'] !=
+                                                              null
+                                                          ? result['message']
+                                                                .toString()
+                                                          : (isSuccess
+                                                                ? "Keranjang berhasil dikosongkan."
+                                                                : "Gagal mengosongkan keranjang.");
+                                                      CustomSnackBar.show(
+                                                        context,
+                                                        msg,
+                                                        isSuccess,
+                                                      );
+                                                    }
+                                                  } finally {
+                                                    // ── Selalu reset meski API error ──
+                                                    if (mounted) {
+                                                      setState(
+                                                        () => _isClearingCart =
+                                                            false,
+                                                      );
+                                                    }
+                                                  }
+                                                },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                Colors.red.shade400,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            elevation: 0,
+                                          ),
+                                          child: const Text(
+                                            "Hapus",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                                  );
+                                },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -864,8 +869,6 @@ class _CartPageState extends State<CartPage>
                     ],
                   ),
                 ),
-
-                // Stats row kecil di header
                 if (items.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Padding(
@@ -895,8 +898,6 @@ class _CartPageState extends State<CartPage>
                   ),
                 ],
                 const SizedBox(height: 18),
-
-                // ── List area ──
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -912,8 +913,6 @@ class _CartPageState extends State<CartPage>
                         : _buildCartList(items),
                   ),
                 ),
-
-                // ── Checkout panel bawah — posisi TIDAK DIUBAH (di atas nav global) ──
                 if (items.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -968,11 +967,14 @@ class _CartPageState extends State<CartPage>
                             ],
                           ),
                         ),
+                        // ── Tombol Checkout — guard _isCheckoutOpen ──
                         GestureDetector(
-                          onTap: () {
-                            HapticFeedback.mediumImpact();
-                            _checkout();
-                          },
+                          onTap: _isCheckoutOpen
+                              ? null
+                              : () {
+                                  HapticFeedback.mediumImpact();
+                                  _checkout();
+                                },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 28,
@@ -1052,7 +1054,7 @@ class _CartPageState extends State<CartPage>
   }
 
   // ════════════════════════════════════════════════════════
-  //  CART CARD — tanpa gambar, ikon teal
+  //  CART CARD — guard _isDeletingItem pada tombol hapus
   // ════════════════════════════════════════════════════════
   Widget _buildCartCard(CartItem item) {
     return Container(
@@ -1079,11 +1081,9 @@ class _CartPageState extends State<CartPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Baris atas: ikon + info + kategori badge ──
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Ikon teal dengan nomor urut
                 Container(
                   width: 54,
                   height: 54,
@@ -1109,7 +1109,6 @@ class _CartPageState extends State<CartPage>
                   ),
                 ),
                 const SizedBox(width: 14),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1138,8 +1137,6 @@ class _CartPageState extends State<CartPage>
                     ],
                   ),
                 ),
-
-                // Kategori badge — teal
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -1165,8 +1162,6 @@ class _CartPageState extends State<CartPage>
               ],
             ),
             const SizedBox(height: 14),
-
-            // Garis putus-putus
             Row(
               children: List.generate(
                 36,
@@ -1179,12 +1174,9 @@ class _CartPageState extends State<CartPage>
               ),
             ),
             const SizedBox(height: 14),
-
-            // ── Baris bawah: jumlah tiket + harga + hapus ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Jumlah tiket chip
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -1215,10 +1207,8 @@ class _CartPageState extends State<CartPage>
                     ],
                   ),
                 ),
-
                 Row(
                   children: [
-                    // Harga subtotal
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -1251,44 +1241,66 @@ class _CartPageState extends State<CartPage>
                     ),
                     const SizedBox(width: 12),
 
-                    // Tombol hapus — logika TIDAK DIUBAH
+                    // ── Tombol hapus per item — guard _isDeletingItem ──
                     GestureDetector(
-                      onTap: () async {
-                        HapticFeedback.lightImpact();
-
-                        final result = await CartModel.instance.removeItem(
-                          item.productId,
-                        );
-
-                        if (mounted) {
-                          final bool isSuccess = result['success'] == true;
-                          // Gunakan pesan fallback jika server tidak mengirimkan 'message'
-                          final String msg = result['message'] != null
-                              ? result['message'].toString()
-                              : (isSuccess
-                                    ? "Tiket berhasil dihapus dari keranjang."
-                                    : "Gagal menghapus tiket dari keranjang.");
-
-                          // 2. Tampilkan Notifikasi Atas
-                          CustomSnackBar.show(context, msg, isSuccess);
-                        }
-                      },
+                      onTap: _isDeletingItem
+                          ? null // block jika sedang ada penghapusan berlangsung
+                          : () async {
+                              HapticFeedback.lightImpact();
+                              setState(() => _isDeletingItem = true);
+                              try {
+                                final result = await CartModel.instance
+                                    .removeItem(item.productId);
+                                if (mounted) {
+                                  final bool isSuccess =
+                                      result['success'] == true;
+                                  final String msg = result['message'] != null
+                                      ? result['message'].toString()
+                                      : (isSuccess
+                                            ? "Tiket berhasil dihapus dari keranjang."
+                                            : "Gagal menghapus tiket dari keranjang.");
+                                  CustomSnackBar.show(context, msg, isSuccess);
+                                }
+                              } finally {
+                                // ── Selalu reset meski API error/timeout ──
+                                if (mounted) {
+                                  setState(() => _isDeletingItem = false);
+                                }
+                              }
+                            },
                       child: Container(
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.07),
+                          // ── Visual feedback: redup saat sedang loading ──
+                          color: _isDeletingItem
+                              ? Colors.grey.withOpacity(0.07)
+                              : Colors.red.withOpacity(0.07),
                           borderRadius: BorderRadius.circular(11),
                           border: Border.all(
-                            color: Colors.red.withOpacity(0.15),
+                            color: _isDeletingItem
+                                ? Colors.grey.withOpacity(0.15)
+                                : Colors.red.withOpacity(0.15),
                             width: 1,
                           ),
                         ),
-                        child: Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                          color: Colors.red.shade400,
-                        ),
+                        child: _isDeletingItem
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: _T.textMuted,
+                                  ),
+                                ),
+                              )
+                            : Icon(
+                                Icons.delete_outline_rounded,
+                                size: 18,
+                                color: Colors.red.shade400,
+                              ),
                       ),
                     ),
                   ],
@@ -1301,7 +1313,6 @@ class _CartPageState extends State<CartPage>
     );
   }
 
-  // ── Stat kecil di header ──
   Widget _headerStat(String value, String label) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1327,7 +1338,6 @@ class _CartPageState extends State<CartPage>
     );
   }
 
-  // ── Empty state ──
   Widget _buildEmptyState() {
     return Center(
       child: Column(

@@ -183,6 +183,34 @@ const deleteBookingById = async (req, res, next) => {
   }
 };
 
+const searchBooking = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Kata kunci pencarian (q) tidak boleh kosong.",
+      });
+    }
+
+    const bookings = await bookingRepository.searchBookings(q);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Hasil pencarian",
+      data: {
+        bookings: bookings,
+      },
+    });
+  } catch (error) {
+    console.error("Error pada searchBooking:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Terjadi kesalahan internal pada server.",
+    });
+  }
+};
 export {
   createBooking,
   getBookings,
@@ -190,4 +218,5 @@ export {
   getHistoryBookingById,
   getBookingById,
   deleteBookingById,
+  searchBooking,
 };
