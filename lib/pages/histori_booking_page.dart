@@ -28,7 +28,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
   List<dynamic> _filtered = [];
   bool _loading = false;
 
-  // Status filter state
   String? _selectedStatus;
 
   // Status label → warna
@@ -55,6 +54,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     _fetchHistory();
   }
 
+  // ── Fetch data ──────────────────────────────────────────────────────
   Future<void> _fetchHistory() async {
     setState(() => _loading = true);
     final list = await ApiService.getHistoryBookings();
@@ -79,6 +79,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     });
   }
 
+  // ── Snackbar ────────────────────────────────────────────────────────
   void _snack(String msg, {bool success = true}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
@@ -88,7 +89,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     ));
   }
 
-  // ── Verifikasi pembayaran ──
+  // ── Verifikasi pembayaran ───────────────────────────────────────────
   Future<void> _verifyBooking(String bookingId) async {
     final confirm = await _confirmDialog(
       'Verifikasi Pembayaran',
@@ -103,17 +104,17 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     if (res['success'] == true) _fetchHistory();
   }
 
-  // ── Batalkan pembayaran ──
+  // ── Batalkan booking ────────────────────────────────────────────────
   Future<void> _cancelBooking(String bookingId) async {
     final reasonCtrl = TextEditingController();
     final reason = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Batalkan Booking',
-            style:
-                TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Batalkan Booking',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -130,8 +131,9 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                 filled: true,
                 fillColor: const Color(0xFFF7F7F7),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ],
@@ -149,8 +151,10 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Batalkan Booking',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Batalkan Booking',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -163,13 +167,13 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
 
     final res = await ApiService.cancelPayment(
       bookingId: bookingId,
-      reason:    reason,
+      reason: reason,
     );
     _snack(res['message'] ?? 'Selesai', success: res['success'] == true);
     if (res['success'] == true) _fetchHistory();
   }
 
-  // ── Hapus booking ──
+  // ── Hapus booking ───────────────────────────────────────────────────
   Future<void> _deleteBooking(String bookingId) async {
     final confirm = await _confirmDialog(
       'Hapus Booking',
@@ -184,6 +188,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     if (res['success'] == true) _fetchHistory();
   }
 
+  // ── Confirm dialog generic ──────────────────────────────────────────
   Future<bool> _confirmDialog(
     String title,
     String content, {
@@ -222,7 +227,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     return result ?? false;
   }
 
-  // ── Detail booking sheet ──
+  // ── Detail bottom sheet ─────────────────────────────────────────────
   void _showDetail(Map<String, dynamic> b) {
     showModalBottomSheet(
       context: context,
@@ -242,6 +247,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Handle bar
               Center(
                 child: Container(
                   width: 40,
@@ -253,34 +259,61 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // Header
               Row(
                 children: [
-                  const Text('Detail Booking',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: charcoal)),
+                  const Text(
+                    'Detail Booking',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: charcoal),
+                  ),
                   const Spacer(),
                   _statusBadge(b['status']),
                 ],
               ),
               const SizedBox(height: 20),
 
-              // Info booking
-              _detailRow('ID Booking', b['id']?.toString() ?? '-'),
-              _detailRow('User', b['user']?['fullname'] ?? b['user_id']?.toString() ?? '-'),
-              _detailRow('Email', b['user']?['email'] ?? '-'),
-              _detailRow('Tanggal Mulai', _fmtDate(b['startDate'] ?? b['start_date'])),
-              _detailRow('Tanggal Selesai', _fmtDate(b['endDate'] ?? b['end_date'])),
-              _detailRow('Total Harga', _fmtRupiah(b['total_price'])),
+              // Info rows
+              _detailRow('ID Booking',
+                  b['id']?.toString() ?? '-'),
+              _detailRow('Tiket',
+                  b['ticket_code']?.toString() ?? '-'),
+              _detailRow('User',
+                  b['user']?['fullname'] ??
+                      b['user_id']?.toString() ??
+                      '-'),
+              _detailRow('Email',
+                  b['user']?['email'] ?? '-'),
+              _detailRow('Tanggal Mulai',
+                  _fmtDate(b['startDate'] ?? b['start_date'])),
+              _detailRow('Tanggal Selesai',
+                  _fmtDate(b['endDate'] ?? b['end_date'])),
+              _detailRow('Total Harga',
+                  _fmtRupiah(b['total_price'])),
               if (b['payment_method'] != null)
-                _detailRow('Metode Bayar', b['payment_method'].toString()),
+                _detailRow('Metode Bayar',
+                    b['payment_method'].toString()),
+              if (b['paidAt'] != null)
+                _detailRow('Dibayar Pada',
+                    _fmtDate(b['paidAt'])),
+
+              // Check-in status
+              _detailRow(
+                'Check-in',
+                (b['is_checked_in'] == true)
+                    ? 'Sudah check-in${b['checked_in_at'] != null ? ' · ${_fmtDate(b['checked_in_at'])}' : ''}'
+                    : 'Belum check-in',
+              ),
+
               if (b['created_at'] != null)
                 _detailRow('Dibuat', _fmtDate(b['created_at'])),
 
               const SizedBox(height: 20),
 
-              // Action buttons berdasarkan status
+              // Action buttons
               _buildActionButtons(b),
               const SizedBox(height: 16),
             ],
@@ -290,6 +323,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
+  // ── Action buttons berdasarkan status ──────────────────────────────
   Widget _buildActionButtons(Map<String, dynamic> b) {
     final status = (b['status'] ?? '').toString().toUpperCase();
     final id = b['id']?.toString() ?? '';
@@ -324,12 +358,13 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                 Navigator.pop(context);
                 _cancelBooking(id);
               },
-              icon: Icon(Icons.cancel_outlined,
-                  color: Colors.red.shade400),
-              label: Text('Batalkan',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.red.shade400)),
+              icon: Icon(Icons.cancel_outlined, color: Colors.red.shade400),
+              label: Text(
+                'Batalkan',
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red.shade400),
+              ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.red.shade300),
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -347,12 +382,13 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                 Navigator.pop(context);
                 _deleteBooking(id);
               },
-              icon: Icon(Icons.delete_outline,
-                  color: Colors.red.shade400),
-              label: Text('Hapus Booking',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.red.shade400)),
+              icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
+              label: Text(
+                'Hapus Booking',
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red.shade400),
+              ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.red.shade300),
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -366,6 +402,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
+  // ── Build ───────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -391,13 +428,12 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
           ? const Center(child: CircularProgressIndicator(color: teal500))
           : Column(
               children: [
-                // ── Filter chip bar ──
+                // ── Header filter bar ──
                 Container(
                   color: teal500,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                   child: Column(
                     children: [
-                      // Counter badge
                       Row(
                         children: [
                           Text(
@@ -438,13 +474,11 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                           onRefresh: _fetchHistory,
                           color: teal500,
                           child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(
-                                16, 16, 16, 80),
+                            padding:
+                                const EdgeInsets.fromLTRB(16, 16, 16, 80),
                             itemCount: _filtered.length,
-                            itemBuilder: (context, i) {
-                              return _buildCard(
-                                  _filtered[i] as Map<String, dynamic>);
-                            },
+                            itemBuilder: (context, i) =>
+                                _buildCard(_filtered[i] as Map<String, dynamic>),
                           ),
                         ),
                 ),
@@ -453,6 +487,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
+  // ── Filter chip ─────────────────────────────────────────────────────
   Widget _chip(String label, String? status) {
     final selected = _selectedStatus == status;
     return GestureDetector(
@@ -479,9 +514,12 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
+  // ── Card item ───────────────────────────────────────────────────────
   Widget _buildCard(Map<String, dynamic> b) {
     final status = (b['status'] ?? '').toString().toUpperCase();
     final isPendingVerif = status == 'PENDING_VERIFICATION';
+    final isCheckedIn = b['is_checked_in'] == true;
+
     return GestureDetector(
       onTap: () => _showDetail(b),
       child: Container(
@@ -505,6 +543,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Row atas: avatar + nama + badge status
               Row(
                 children: [
                   Container(
@@ -539,12 +578,23 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                       ],
                     ),
                   ),
-                  _statusBadge(b['status']),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _statusBadge(b['status']),
+                      if (isCheckedIn) ...[
+                        const SizedBox(height: 4),
+                        _checkInBadge(),
+                      ],
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
               const Divider(height: 1),
               const SizedBox(height: 10),
+
+              // Row bawah: tanggal + harga
               Row(
                 children: [
                   _infoChip(Icons.calendar_today_outlined,
@@ -563,7 +613,8 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                   ),
                 ],
               ),
-              // Quick action untuk pending verif
+
+              // Quick action hanya untuk PENDING_VERIFICATION
               if (isPendingVerif) ...[
                 const SizedBox(height: 10),
                 Row(
@@ -615,6 +666,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
+  // ── Status badge ────────────────────────────────────────────────────
   Widget _statusBadge(dynamic status) {
     final s = (status ?? '').toString().toUpperCase();
     final color = _statusColor[s] ?? Colors.grey;
@@ -634,6 +686,33 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
+  // ── Check-in badge ──────────────────────────────────────────────────
+  Widget _checkInBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFF48BB78).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.door_front_door_outlined,
+              size: 10, color: Color(0xFF2F855A)),
+          SizedBox(width: 3),
+          Text(
+            'Check-in',
+            style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF2F855A)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Info chip (ikon + teks kecil) ───────────────────────────────────
   Widget _infoChip(IconData icon, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -641,12 +720,12 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
         Icon(icon, size: 11, color: Colors.black38),
         const SizedBox(width: 3),
         Text(label,
-            style: const TextStyle(
-                fontSize: 11, color: Colors.black54)),
+            style: const TextStyle(fontSize: 11, color: Colors.black54)),
       ],
     );
   }
 
+  // ── Detail row ──────────────────────────────────────────────────────
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -654,7 +733,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 130,
             child: Text(label,
                 style: const TextStyle(
                     fontSize: 13, color: Colors.black45)),
@@ -673,6 +752,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
+  // ── Format helpers ──────────────────────────────────────────────────
   String _fmtDate(dynamic val) {
     if (val == null) return '-';
     try {
@@ -699,6 +779,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     return 'Rp ${buf.toString().split('').reversed.join()}';
   }
 
+  // ── Empty state ─────────────────────────────────────────────────────
   Widget _buildEmpty() {
     return Center(
       child: Column(

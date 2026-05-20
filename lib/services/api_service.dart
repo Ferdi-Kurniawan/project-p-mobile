@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http_parser/http_parser.dart';
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.9:3000";
+  static const String baseUrl = "http://192.168.1.5:3000";
   static Map<String, dynamic>? userData;
   static final http.Client _client = http.Client();
 
@@ -1211,24 +1211,32 @@ class ApiService {
   }
 
 // ── Check In Scan QR code ──  [ADMIN]
-  static Future<Map<String, dynamic>> checkIn({required String ticketCode}) async {
+   // ── CHECK IN via QR Scan ──  [ADMIN]
+  // PATCH /payment/check-in/:ticketCode
+  //
+  // FIX: ticketCode sekarang dikirim sebagai URL param (bukan body),
+  //      sesuai dengan route backend: /payment/check-in/:ticketCode
+  //
+  // Returns: { success, message, data? }
+  static Future<Map<String, dynamic>> checkIn({
+    required String ticketCode,
+  }) async {
     try {
-      final headers = await _authHeaders();
-      
-      // Ensure your headers include 'Content-Type': 'application/json'
+      final headers = await _authHeaders(json: false); // tidak perlu Content-Type JSON karena no body
+ 
       final response = await _client.patch(
-        Uri.parse("$baseUrl/booking/check-in"),
+        Uri.parse("$baseUrl/payment/check-in/$ticketCode"), // FIX: ticketCode di URL
         headers: headers,
-        body: jsonEncode({"ticket_code": ticketCode}),
+        // FIX: tidak ada body — data dikirim via path param
       );
-
-      // Extract and parse the response body
+ 
       final data = jsonDecode(response.body);
-
+ 
       if (response.statusCode == 200) {
         return {
           "success": true,
-          "message": data["message"] ?? "Verifikasi Berhasil dilakukan",
+          "message": data["message"] ?? "Verifikasi berhasil dilakukan",
+          "data": data["data"], // berisi booking_id, id, ticket_code, check_in_time
         };
       } else {
         return {
@@ -1243,8 +1251,8 @@ class ApiService {
       };
     } catch (e) {
       return {
-        "success": false, 
-        "message": "Terjadi kesalahan sistem: ${e.toString()}"
+        "success": false,
+        "message": "Terjadi kesalahan sistem: ${e.toString()}",
       };
     }
   }

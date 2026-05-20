@@ -202,9 +202,9 @@ const cancelPaymentAdmin = async (req, res) => {
 
 const checkInTicket = async (req, res) => {
   // Tiket code didapat dari hasil scan kamera (dikirim via body oleh aplikasi scanner admin)
-  const { ticket_code } = req.body;
+  const { ticketCode } = req.params;
 
-  if (!ticket_code) {
+  if (!ticketCode) {
     return res
       .status(400)
       .json({ status: "fail", error: "Kode tiket wajib disertakan." });
@@ -212,10 +212,7 @@ const checkInTicket = async (req, res) => {
 
   try {
     // 1. Cari booking berdasarkan ticket_code
-    const booking = await prisma.booking.findUnique({
-      where: { ticket_code: ticket_code },
-      include: { user: true },
-    });
+    const booking = await bookingRepository.checkTiketCode(ticketCode);
 
     // 2. Validasi apakah tiket ada
     if (!booking) {
@@ -242,16 +239,20 @@ const checkInTicket = async (req, res) => {
     }
 
     // 5. Update status check-in di database
-    const updatedBooking = await PaymentRepository.checkInTicket(ticket_code);
+    const updatedBooking = await PaymentRepository.checkInTicket(ticketCode);
 
-    return res.status(200).json({
+    const invoice = res.status(200).json({
       status: "success",
       message: `Check-in berhasil untuk tamu: ${booking.user.fullname}`,
       data: {
         ticket_code: updatedBooking.ticket_code,
         check_in_time: updatedBooking.checked_in_at,
       },
+
     });
+
+      console.log(invoice)
+
   } catch (error) {
     return res.status(500).json({ status: "fail", error: error.message });
   }

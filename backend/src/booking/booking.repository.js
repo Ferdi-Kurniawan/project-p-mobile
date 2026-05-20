@@ -118,6 +118,13 @@ class BookingRepository {
       where: { id: bookingId },
     });
   }
+
+  async checkTiketCode(ticketCode) {
+    return await prisma.booking.findUnique({
+      where: { ticket_code: ticketCode },
+      include: { user: true },
+    });
+  }
 }
 
 export default new BookingRepository();

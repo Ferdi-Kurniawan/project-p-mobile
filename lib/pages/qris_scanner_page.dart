@@ -2,44 +2,58 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
-import '../helper/snackbar_helper.dart'; // Pastikan path import ini sesuai
+import '../helper/snackbar_helper.dart';
 
 // =====================================================================
-//  QRIS SCANNER PAGE
+//  QRIS SCANNER PAGE  — Fixed version
+//  Fixes:
+//    1. Camera error handler (Device error code 4/5)
+//    2. Camera stop guard (prevent stop() on uninitialized camera)
+//    3. Torch & switchCamera guards
+//    4. _resetScan: restart hanya jika camera initialized
+//    5. _detailRow Expanded wrapper (text overflow)
 // =====================================================================
 
 class QrisScannerPage extends StatefulWidget {
   const QrisScannerPage({super.key});
-  
+
   @override
   State<QrisScannerPage> createState() => _QrisScannerPageState();
 }
 
 class _QrisScannerPageState extends State<QrisScannerPage>
     with WidgetsBindingObserver {
-  static const teal500   = Color(0xFF319795);
-  static const teal400   = Color(0xFF4DB6AC);
-  static const charcoal  = Color(0xFF2D3748);
-  
-  final MobileScannerController _camCtrl = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
-    facing: CameraFacing.back,
-    torchEnabled: false,
-  );
-  
-  bool _torchOn     = false;
-  bool _scanning    = true; 
-  bool _loadingData = false;
+  static const teal500  = Color(0xFF319795);
+  static const teal400  = Color(0xFF4DB6AC);
+  static const charcoal = Color(0xFF2D3748);
 
-  // Hasil scan terakhir
+  late final MobileScannerController _camCtrl;
+
+  bool _torchOn     = false;
+  bool _scanning    = true;
+  bool _loadingData = false;
+  bool _cameraError = false; // FIX #1: track camera error state
+
   String?               _scannedRaw;
+  String?               _successMsg;
   Map<String, dynamic>? _bookingData;
   String?               _errorMsg;
 
   @override
   void initState() {
     super.initState();
+    _initCamera();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  // FIX #1: Pisahkan inisialisasi kamera agar bisa di-retry
+  void _initCamera() {
+    _camCtrl = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+    setState(() => _cameraError = false);
   }
 
   @override
@@ -51,46 +65,51 @@ class _QrisScannerPageState extends State<QrisScannerPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // FIX #2: Guard isInitialized sebelum stop/start
     if (!_camCtrl.value.isInitialized) return;
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
       _camCtrl.stop();
-    } else if (state == AppLifecycleState.resumed) {
+    } else if (state == AppLifecycleState.resumed && _scanning) {
       _camCtrl.start();
     }
   }
 
-  // ── Ekstrak ticket code / bookingId dari raw QR ──
-  String? _parseBookingId(String raw) {
+  // ── Ekstrak ticket code dari raw QR ──
+  String? _parseTicketCode(String raw) {
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      return (json['ticket_code'] ?? json['bookingId'] ?? json['booking_id'] ?? json['id'])
+      return (json['ticket_code'] ??
+              json['bookingId'] ??
+              json['booking_id'] ??
+              json['id'])
           ?.toString();
     } catch (_) {}
-    
     final trimmed = raw.trim();
-    if (trimmed.isNotEmpty) return trimmed;
-    return null;
+    return trimmed.isNotEmpty ? trimmed : null;
   }
 
   // ── Dipanggil setiap QR berhasil terbaca ──
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (!_scanning || _loadingData) return;
     final barcode = capture.barcodes.firstOrNull;
-    if (barcode == null || barcode.rawValue == null) return;
+    if (barcode?.rawValue == null) return;
 
-    final raw = barcode.rawValue!;
+    final raw = barcode!.rawValue!;
     setState(() {
-      _scanning    = false; 
+      _scanning    = false;
       _scannedRaw  = raw;
       _loadingData = true;
       _bookingData = null;
       _errorMsg    = null;
     });
-    
-    await _camCtrl.stop(); 
 
-    final ticketCode = _parseBookingId(raw);
+    // FIX #2: Guard stop
+    if (_camCtrl.value.isInitialized) {
+      await _camCtrl.stop();
+    }
+
+    final ticketCode = _parseTicketCode(raw);
     if (ticketCode == null) {
       setState(() {
         _errorMsg    = 'QR tidak valid. Bukan format tiket wisata.';
@@ -99,33 +118,38 @@ class _QrisScannerPageState extends State<QrisScannerPage>
       return;
     }
 
-    // 1. Tembak API Check-In
+    // 1. Check-In API → /payment/check-in/:ticketCode (param)
     final checkInResult = await ApiService.checkIn(ticketCode: ticketCode);
-    
     if (!mounted) return;
 
-    // 2. Munculkan Notifikasi Custom SnackBar
+    // 2. Tampilkan SnackBar (selalu, seperti semula)
     CustomSnackBar.show(
       context,
       checkInResult["message"] ?? "Memproses tiket...",
       checkInResult["success"] ?? false,
     );
 
-    // 3. Ambil detail booking dari API untuk ditampilkan di UI
-    final data = await ApiService.getHistoryBookingById(ticketCode);
-    if (!mounted) return;
+    // Cek apakah check-in gagal — toleran terhadap berbagai format response
+    final rawSuccess = checkInResult["success"];
+    final bool checkInSuccess = rawSuccess == true ||
+        rawSuccess == 1 ||
+        rawSuccess?.toString().toLowerCase() == 'true';
 
-    if (data != null) {
+    if (!checkInSuccess) {
       setState(() {
-        _bookingData = data;
+        _errorMsg    = checkInResult["message"] ?? 'Gagal memverifikasi tiket.';
         _loadingData = false;
       });
-    } else {
-      setState(() {
-        _errorMsg    = 'Detail tiket tidak dapat dimuat.\nID: $ticketCode';
-        _loadingData = false;
-      });
+      return;
     }
+
+    // 3. Check-in sukses → tampilkan pesan berhasil
+    if (!mounted) return;
+    setState(() {
+      _successMsg  = checkInResult["message"]?.toString();
+      _bookingData = <String, dynamic>{};
+      _loadingData = false;
+    });
   }
 
   // ── Reset → scan ulang ──
@@ -135,16 +159,48 @@ class _QrisScannerPageState extends State<QrisScannerPage>
       _scannedRaw  = null;
       _bookingData = null;
       _errorMsg    = null;
+      _successMsg  = null;
       _loadingData = false;
+      _cameraError = false;
     });
-    _camCtrl.start();
+    // FIX #2: Guard start
+    if (_camCtrl.value.isInitialized) {
+      _camCtrl.start();
+    }
   }
 
-  // ── Toggle torch ──
+  // FIX #1: Restart kamera setelah error hardware
+  void _retryCameraAfterError() {
+    _camCtrl.dispose();
+    _initCamera();
+    setState(() {
+      _scanning    = true;
+      _scannedRaw  = null;
+      _bookingData = null;
+      _errorMsg    = null;
+      _successMsg  = null;
+      _loadingData = false;
+    });
+  }
+
+  // ── Toggle torch dengan guard ──
   void _toggleTorch() {
+    // FIX #3: Jangan toggle kalau kamera belum ready
+    if (!_camCtrl.value.isInitialized) return;
     _camCtrl.toggleTorch();
     setState(() => _torchOn = !_torchOn);
   }
+
+  // ── Switch camera dengan guard ──
+  void _switchCamera() {
+    // FIX #3: Jangan switch kalau kamera belum ready
+    if (!_camCtrl.value.isInitialized) return;
+    _camCtrl.switchCamera();
+  }
+
+  // =====================================================================
+  //  BUILD
+  // =====================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -152,13 +208,17 @@ class _QrisScannerPageState extends State<QrisScannerPage>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
+          // FIX #1: errorBuilder untuk handle Device error code 4/5
           MobileScanner(
             controller: _camCtrl,
             onDetect: _onDetect,
+            errorBuilder: (context, error, child) {
+              return _buildCameraError(error.errorCode.name);
+            },
           ),
-          _buildOverlay(),
+          if (!_cameraError) _buildOverlay(),
           _buildTopBar(context),
-          _buildSideButtons(),
+          if (!_cameraError) _buildSideButtons(),
           if (_loadingData || _bookingData != null || _errorMsg != null)
             _buildResultPanel(),
         ],
@@ -177,17 +237,9 @@ class _QrisScannerPageState extends State<QrisScannerPage>
 
       return Stack(
         children: [
-          ColorFiltered(
-            colorFilter: const ColorFilter.mode(
-              Colors.transparent,
-              BlendMode.srcOver,
-            ),
-            child: CustomPaint(
-              size: Size(box.maxWidth, box.maxHeight),
-              painter: _OverlayPainter(
-                cutRect: Rect.fromLTWH(l, t, cut, cut),
-              ),
-            ),
+          CustomPaint(
+            size: Size(box.maxWidth, box.maxHeight),
+            painter: _OverlayPainter(cutRect: Rect.fromLTWH(l, t, cut, cut)),
           ),
           ..._corners(l, t, cut),
           Positioned(
@@ -214,7 +266,7 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     const thick = 3.5;
     const r     = 6.0;
     final color = teal400;
-    
+
     Widget corner({
       required double left,
       required double top,
@@ -223,7 +275,7 @@ class _QrisScannerPageState extends State<QrisScannerPage>
     }) {
       return Positioned(
         left: left,
-        top:  top,
+        top: top,
         child: Transform.scale(
           scaleX: flipH ? -1 : 1,
           scaleY: flipV ? -1 : 1,
@@ -289,13 +341,13 @@ class _QrisScannerPageState extends State<QrisScannerPage>
           _iconBtn(
             icon: _torchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
             active: _torchOn,
-            onTap: _toggleTorch,
+            onTap: _toggleTorch, // FIX #3: sudah ada guard di dalam
             tooltip: 'Senter',
           ),
           const SizedBox(height: 12),
           _iconBtn(
             icon: Icons.flip_camera_ios_rounded,
-            onTap: () => _camCtrl.switchCamera(),
+            onTap: _switchCamera, // FIX #3: sudah ada guard di dalam
             tooltip: 'Balik kamera',
           ),
         ],
@@ -327,6 +379,64 @@ class _QrisScannerPageState extends State<QrisScannerPage>
             ),
           ),
           child: Icon(icon, color: Colors.white, size: 22),
+        ),
+      ),
+    );
+  }
+
+  // ── FIX #1: Camera error widget ──
+  Widget _buildCameraError(String errorCode) {
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade900.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.videocam_off_rounded,
+                    color: Colors.red.shade300, size: 36),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Kamera Tidak Tersedia',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Terjadi error pada kamera ($errorCode).\nPastikan izin kamera sudah diberikan.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white54, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              ElevatedButton.icon(
+                onPressed: _retryCameraAfterError,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Coba Lagi',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: teal500,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 28, vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -378,11 +488,8 @@ class _QrisScannerPageState extends State<QrisScannerPage>
         const SizedBox(height: 12),
         const CircularProgressIndicator(color: teal500),
         const SizedBox(height: 16),
-        Text(
-          'Memproses tiket...',
-          style: TextStyle(
-              fontSize: 14, color: Colors.grey.shade500),
-        ),
+        Text('Memproses tiket...',
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
         const SizedBox(height: 8),
         Text(
           _scannedRaw ?? '',
@@ -401,10 +508,8 @@ class _QrisScannerPageState extends State<QrisScannerPage>
         Container(
           width: 64,
           height: 64,
-          decoration: BoxDecoration(
-            color: Colors.red.shade50,
-            shape: BoxShape.circle,
-          ),
+          decoration:
+              BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
           child: Icon(Icons.qr_code_2_rounded,
               color: Colors.red.shade400, size: 34),
         ),
@@ -420,8 +525,8 @@ class _QrisScannerPageState extends State<QrisScannerPage>
         Text(
           _errorMsg ?? '',
           textAlign: TextAlign.center,
-          style:
-              TextStyle(fontSize: 13, color: Colors.grey.shade500, height: 1.5),
+          style: TextStyle(
+              fontSize: 13, color: Colors.grey.shade500, height: 1.5),
         ),
         const SizedBox(height: 20),
         _scanAgainBtn(),
@@ -430,73 +535,38 @@ class _QrisScannerPageState extends State<QrisScannerPage>
   }
 
   Widget _buildBookingCard() {
-    final b      = _bookingData!;
-    final status = (b['status'] ?? '').toString().toUpperCase();
-    final isValid = status == 'PAID' || status == 'COMPLETED';
-    
+    final msg = _successMsg ?? 'Check-in berhasil.';
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: isValid
-                    ? teal500.withOpacity(0.1)
-                    : Colors.orange.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isValid
-                    ? Icons.check_circle_outline_rounded
-                    : Icons.warning_amber_rounded,
-                color: isValid ? teal500 : Colors.orange.shade600,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isValid ? 'Tiket Valid' : 'Tiket Bermasalah',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: isValid ? teal500 : Colors.orange.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  _statusBadge(status),
-                ],
-              ),
-            ),
-          ],
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: teal500.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check_circle_outline_rounded,
+            color: teal500,
+            size: 36,
+          ),
         ),
-
-        const SizedBox(height: 18),
-        const Divider(height: 1),
-        const SizedBox(height: 16),
-
-        _detailRow(Icons.person_outline_rounded, 'Nama',
-            b['user']?['fullname'] ?? b['user_id']?.toString() ?? '-'),
-        _detailRow(Icons.email_outlined, 'Email',
-            b['user']?['email'] ?? '-'),
-        _detailRow(Icons.receipt_long_outlined, 'Booking ID',
-            (b['id']?.toString() ?? '-').length > 16
-                ? '${b['id'].toString().substring(0, 16)}...'
-                : b['id']?.toString() ?? '-'),
-        _detailRow(Icons.calendar_today_outlined, 'Mulai',
-            _fmtDate(b['startDate'] ?? b['start_date'])),
-        _detailRow(Icons.calendar_today_outlined, 'Selesai',
-            _fmtDate(b['endDate'] ?? b['end_date'])),
-        _detailRow(Icons.payments_outlined, 'Total',
-            _fmtRupiah(b['total_price'])),
-
-        const SizedBox(height: 22),
+        const SizedBox(height: 14),
+        const Text(
+          'Check-in Berhasil!',
+          style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: teal500),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          msg,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontSize: 13, color: Colors.grey.shade500, height: 1.5),
+        ),
+        const SizedBox(height: 20),
         _scanAgainBtn(),
       ],
     );
@@ -527,13 +597,12 @@ class _QrisScannerPageState extends State<QrisScannerPage>
       child: Text(
         labels[status] ?? status,
         style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: color),
+            fontSize: 12, fontWeight: FontWeight.w700, color: color),
       ),
     );
   }
 
+  // FIX #4: Bungkus value Text dengan Expanded agar tidak overflow
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -550,18 +619,24 @@ class _QrisScannerPageState extends State<QrisScannerPage>
             child: Icon(icon, color: teal500, size: 17),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 11, color: Colors.black38)),
-              Text(value,
+          Expanded( // FIX #4: Expanded untuk mencegah overflow teks panjang
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11, color: Colors.black38)),
+                Text(
+                  value,
                   style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: charcoal)),
-            ],
+                      color: charcoal),
+                  overflow: TextOverflow.ellipsis, // FIX #4
+                  maxLines: 2,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -580,8 +655,8 @@ class _QrisScannerPageState extends State<QrisScannerPage>
           backgroundColor: teal500,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 13),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
         ),
       ),
@@ -631,8 +706,7 @@ class _OverlayPainter extends CustomPainter {
 
     canvas.saveLayer(full, Paint());
     canvas.drawRect(full, paint);
-    canvas.drawRRect(
-        rrect, Paint()..blendMode = BlendMode.clear);
+    canvas.drawRRect(rrect, Paint()..blendMode = BlendMode.clear);
     canvas.restore();
   }
 
@@ -644,10 +718,10 @@ class _CornerPainter extends CustomPainter {
   final Color color;
   final double thick;
   final double r;
-  
+
   const _CornerPainter(
       {required this.color, required this.thick, required this.r});
-      
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -655,14 +729,13 @@ class _CornerPainter extends CustomPainter {
       ..strokeWidth = thick
       ..strokeCap   = StrokeCap.round
       ..style       = PaintingStyle.stroke;
-      
+
     final path = Path()
       ..moveTo(0, size.height * 0.5)
       ..lineTo(0, r)
-      ..arcToPoint(Offset(r, 0),
-          radius: Radius.circular(r), clockwise: true)
+      ..arcToPoint(Offset(r, 0), radius: Radius.circular(r), clockwise: true)
       ..lineTo(size.width * 0.5, 0);
-      
+
     canvas.drawPath(path, paint);
   }
 

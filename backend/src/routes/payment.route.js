@@ -38,7 +38,7 @@ routerPayment.patch(
 );
 
 routerPayment.patch(
-  "/check-in",
+  "/check-in/:ticketCode",
   authMiddleware(["ADMIN"]),
   checkInTicket
 )
