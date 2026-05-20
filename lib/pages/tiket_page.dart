@@ -41,9 +41,7 @@ class _TiketPageState extends State<TiketPage>
 
   // LOGIKA KATEGORI DINAMIS
   String _selectedFilter = 'Semua';
-  List<String> _filterChips = [
-    'Semua',
-  ]; // Inisialisasi dengan 'Semua' saja dulu
+  List<String> _filterChips = ['Semua'];
 
   @override
   void initState() {
@@ -59,18 +57,14 @@ class _TiketPageState extends State<TiketPage>
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
 
     _animController.forward();
-
-    // Panggil kedua fungsi data
     _loadCategories();
     _loadProducts();
   }
 
-  // ── MENGAMBIL KATEGORI DARI API ──
   Future<void> _loadCategories() async {
     final categories = await ApiService.getCategories();
     if (categories.isNotEmpty) {
       setState(() {
-        // Ambil nama kategori dan gabungkan dengan 'Semua'
         _filterChips = [
           'Semua',
           ...categories.map((c) => c['name'].toString()),
@@ -104,7 +98,7 @@ class _TiketPageState extends State<TiketPage>
       });
     } else {
       setState(() {
-        _villages = []; // Kosongkan jika API gagal
+        _villages = [];
         _isLoadingProducts = false;
       });
     }
@@ -147,7 +141,6 @@ class _TiketPageState extends State<TiketPage>
       backgroundColor: _T.bgPage,
       body: Stack(
         children: [
-          // Header Gradient
           Positioned(
             top: 0,
             left: 0,
@@ -170,7 +163,6 @@ class _TiketPageState extends State<TiketPage>
           SafeArea(
             child: Column(
               children: [
-                // Header Content
                 Padding(
                   padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
                   child: Row(
@@ -234,7 +226,6 @@ class _TiketPageState extends State<TiketPage>
                   ),
                 ),
                 const SizedBox(height: 18),
-                // Statistics Header
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Row(
@@ -248,7 +239,6 @@ class _TiketPageState extends State<TiketPage>
                   ),
                 ),
                 const SizedBox(height: 14),
-                // Main List Area
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -275,7 +265,6 @@ class _TiketPageState extends State<TiketPage>
                                   ),
                                 ),
                                 const SizedBox(height: 14),
-                                // Filter Chips Dinamis
                                 SizedBox(
                                   height: 36,
                                   child: ListView.separated(
@@ -333,7 +322,6 @@ class _TiketPageState extends State<TiketPage>
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                // Wisata Cards
                                 if (_filteredVillages.isEmpty)
                                   const Center(
                                     child: Text(
@@ -489,7 +477,7 @@ class _TiketPageState extends State<TiketPage>
 }
 
 // ════════════════════════════════════════════════════════
-//  CHECKOUT SHEET — Sesuai permintaan (Logika tetap)
+//  CHECKOUT SHEET — Fix double-tap bug
 // ════════════════════════════════════════════════════════
 class _CheckoutSheet extends StatefulWidget {
   final Map<String, String> wisata;
@@ -503,6 +491,9 @@ class _CheckoutSheet extends StatefulWidget {
 
 class _CheckoutSheetState extends State<_CheckoutSheet> {
   int _jumlah = 1;
+  // ── FIX: flag untuk mencegah double-submit ──
+  bool _isLoading = false;
+
   int get _hargaBase => int.tryParse(widget.wisata['hargaNum'] ?? '0') ?? 0;
   int get _totalHarga => _hargaBase * _jumlah;
 
@@ -512,6 +503,36 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     if (message is List) return message.join(", ");
     if (message is Map) return message.values.join(", ");
     return message.toString();
+  }
+
+  Future<void> _handleAddToCart() async {
+    // Abaikan jika sedang memproses request sebelumnya
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await CartModel.instance.addItem({
+        'productId': widget.wisata['productId'] ?? '',
+        'name': widget.wisata['name'] ?? '',
+        'hargaNum': widget.wisata['hargaNum'] ?? '0',
+        'kategori': widget.wisata['kategori'] ?? '',
+      }, _jumlah);
+
+      if (!mounted) return;
+
+      final bool isSuccess = result['success'] == true;
+      final String displayMsg = _parseErrorMessage(result['message']);
+
+      CustomSnackBar.show(context, displayMsg, isSuccess);
+
+      if (isSuccess) {
+        Navigator.pop(context);
+      }
+    } finally {
+      // Selalu reset flag, bahkan jika terjadi error
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -543,14 +564,16 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ),
           const SizedBox(height: 20),
 
-          // Qty Selector
+          // Qty Selector — juga dinonaktifkan saat loading
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                onPressed: () {
-                  if (_jumlah > 1) setState(() => _jumlah--);
-                },
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        if (_jumlah > 1) setState(() => _jumlah--);
+                      },
                 icon: const Icon(Icons.remove_circle_outline),
               ),
               Text(
@@ -561,7 +584,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 ),
               ),
               IconButton(
-                onPressed: () => setState(() => _jumlah++),
+                onPressed: _isLoading ? null : () => setState(() => _jumlah++),
                 icon: const Icon(Icons.add_circle_outline),
               ),
             ],
@@ -588,41 +611,35 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () async {
-                final result = await CartModel.instance.addItem({
-                  'productId': widget.wisata['productId'] ?? '',
-                  'name': widget.wisata['name'] ?? '',
-                  'hargaNum': widget.wisata['hargaNum'] ?? '0',
-                  'kategori': widget.wisata['kategori'] ?? '',
-                }, _jumlah);
-
-                if (!mounted) return;
-
-                // result['success'] sekarang aman karena result bukan bool lagi
-                final bool isSuccess = result['success'] == true;
-                final String displayMsg = _parseErrorMessage(result['message']);
-
-                // Tampilkan SnackBar Premium
-                CustomSnackBar.show(context, displayMsg, isSuccess);
-
-                if (isSuccess) {
-                  Navigator.pop(context);
-                }
-              },
+              // ── FIX: null = disabled saat loading, mencegah tap ganda ──
+              onPressed: _isLoading ? null : _handleAddToCart,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00B09B),
+                disabledBackgroundColor: const Color(
+                  0xFF00B09B,
+                ).withOpacity(0.55),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Text(
-                "Tambah ke Keranjang",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _isLoading
+                  // Tampilkan spinner kecil saat proses berlangsung
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      "Tambah ke Keranjang",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],

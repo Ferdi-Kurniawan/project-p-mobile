@@ -249,10 +249,40 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Kata kunci pencarian (q) tidak boleh kosong.",
+      });
+    }
+
+    const users = await UserRepository.searchUsers(q);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Data user berhasil ditemukan.",
+      data: {
+        users: users, // Mengembalikan array list user
+      },
+    });
+  } catch (error) {
+    console.error("Error pada searchUsers:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Terjadi kesalahan internal pada server.",
+    });
+  }
+};
+
 export {
   createUser,
   loginUser,
   logoutUser,
+  searchUsers,
   getAllUsers,
   changePassword,
   getProfile,

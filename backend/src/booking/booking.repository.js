@@ -125,6 +125,32 @@ class BookingRepository {
       include: { user: true },
     });
   }
+
+  // Mengambil data booking lengkap berdasarkan ticket_code
+  // File: booking.repository.js (atau tempat class BookingRepository berada)
+
+  async searchBookings(keyword) {
+    return await this._prisma.booking.findMany({
+      where: {
+        OR: [
+          // Mencari berdasarkan kode tiket yang mengandung keyword
+          { ticket_code: { contains: keyword } },
+          // ATAU mencari berdasarkan nama user yang mengandung keyword
+          { user: { fullname: { contains: keyword } } },
+        ],
+      },
+      include: {
+        user: {
+          select: { fullname: true, email: true, phone: true },
+        },
+        items: {
+          include: {
+            product: { select: { name: true, price: true } },
+          },
+        },
+      },
+    });
+  }
 }
 
 export default new BookingRepository();

@@ -3,15 +3,8 @@ import '../services/api_service.dart';
 
 // =====================================================================
 //  HISTORI BOOKING PAGE  — Admin view
-//  API:
-//    GET   /booking/history              → getHistoryBookings()
-//    GET   /booking/history/:id          → getHistoryBookingById(id)
-//    PATCH /payment/verify/:bookingId    → verifyPayment(id)
-//    PATCH /payment/cancel/:bookingId    → cancelPayment(bookingId, reason)
-//    DELETE /booking/history/:bookingId  → deleteBooking(id)
 // =====================================================================
 class HistoriBookingPage extends StatefulWidget {
-  /// Jika diisi, list akan otomatis difilter berdasarkan status ini.
   final String? filterStatus;
 
   const HistoriBookingPage({super.key, this.filterStatus});
@@ -21,30 +14,32 @@ class HistoriBookingPage extends StatefulWidget {
 }
 
 class _HistoriBookingPageState extends State<HistoriBookingPage> {
-  static const teal500  = Color(0xFF319795);
+  static const teal500 = Color(0xFF319795);
   static const charcoal = Color(0xFF2D3748);
 
-  List<dynamic> _all      = [];
+  List<dynamic> _all = [];
   List<dynamic> _filtered = [];
   bool _loading = false;
 
   String? _selectedStatus;
 
-  // Status label → warna
+  // FOKUS: Controller untuk Search Bar
+  final _searchCtrl = TextEditingController();
+
   static const Map<String, Color> _statusColor = {
-    'PENDING':              Color(0xFFF6AD55),
+    'PENDING': Color(0xFFF6AD55),
     'PENDING_VERIFICATION': Color(0xFF4299E1),
-    'PAID':                 Color(0xFF48BB78),
-    'CANCELLED':            Color(0xFFFC8181),
-    'COMPLETED':            Color(0xFF319795),
+    'PAID': Color(0xFF48BB78),
+    'CANCELLED': Color(0xFFFC8181),
+    'COMPLETED': Color(0xFF319795),
   };
 
   static const Map<String, String> _statusLabel = {
-    'PENDING':              'Menunggu Bayar',
+    'PENDING': 'Menunggu Bayar',
     'PENDING_VERIFICATION': 'Verifikasi',
-    'PAID':                 'Lunas',
-    'CANCELLED':            'Dibatalkan',
-    'COMPLETED':            'Selesai',
+    'PAID': 'Lunas',
+    'CANCELLED': 'Dibatalkan',
+    'COMPLETED': 'Selesai',
   };
 
   @override
@@ -54,15 +49,30 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     _fetchHistory();
   }
 
-  // ── Fetch data ──────────────────────────────────────────────────────
-  Future<void> _fetchHistory() async {
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Fetch data (Update dengan Search Query) ─────────────────────────
+  Future<void> _fetchHistory({String query = ''}) async {
     setState(() => _loading = true);
-    final list = await ApiService.getHistoryBookings();
-    setState(() {
-      _all     = list;
-      _loading = false;
-      _applyFilter();
-    });
+    try {
+      // Jika query kosong, ambil semua histori. Jika ada, panggil endpoint search.
+      final list = query.isEmpty
+          ? await ApiService.getHistoryBookings()
+          : await ApiService.searchBookings(
+              query,
+            ); // Pastikan fungsi ini ada di api_service.dart
+
+      setState(() {
+        _all = list;
+        _applyFilter();
+      });
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   void _applyFilter() {
@@ -71,9 +81,11 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
         _filtered = _all;
       } else {
         _filtered = _all
-            .where((b) =>
-                (b['status'] ?? '').toString().toUpperCase() ==
-                _selectedStatus!.toUpperCase())
+            .where(
+              (b) =>
+                  (b['status'] ?? '').toString().toUpperCase() ==
+                  _selectedStatus!.toUpperCase(),
+            )
             .toList();
       }
     });
@@ -81,15 +93,18 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
 
   // ── Snackbar ────────────────────────────────────────────────────────
   void _snack(String msg, {bool success = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: success ? teal500 : Colors.red.shade400,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: success ? teal500 : Colors.red.shade400,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
-  // ── Verifikasi pembayaran ───────────────────────────────────────────
+  // ── Verifikasi & Cancel Booking ─────────────────────────────────────
+  // (Fungsi _verifyBooking, _cancelBooking, _deleteBooking, _confirmDialog sama seperti aslinya)
   Future<void> _verifyBooking(String bookingId) async {
     final confirm = await _confirmDialog(
       'Verifikasi Pembayaran',
@@ -104,7 +119,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     if (res['success'] == true) _fetchHistory();
   }
 
-  // ── Batalkan booking ────────────────────────────────────────────────
   Future<void> _cancelBooking(String bookingId) async {
     final reasonCtrl = TextEditingController();
     final reason = await showDialog<String>(
@@ -149,7 +163,8 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               backgroundColor: Colors.red.shade400,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text(
               'Batalkan Booking',
@@ -159,7 +174,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
         ],
       ),
     );
-
     if (reason == null || reason.isEmpty) {
       _snack('Alasan pembatalan tidak boleh kosong', success: false);
       return;
@@ -173,7 +187,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     if (res['success'] == true) _fetchHistory();
   }
 
-  // ── Hapus booking ───────────────────────────────────────────────────
   Future<void> _deleteBooking(String bookingId) async {
     final confirm = await _confirmDialog(
       'Hapus Booking',
@@ -188,7 +201,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     if (res['success'] == true) _fetchHistory();
   }
 
-  // ── Confirm dialog generic ──────────────────────────────────────────
   Future<bool> _confirmDialog(
     String title,
     String content, {
@@ -198,13 +210,15 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title,
-            style: const TextStyle(
-                fontWeight: FontWeight.w800, fontSize: 16)),
-        content: Text(content,
-            style: const TextStyle(fontSize: 13, color: Colors.black54)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
+        content: Text(
+          content,
+          style: const TextStyle(fontSize: 13, color: Colors.black54),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -216,10 +230,13 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               backgroundColor: actionColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text(actionLabel,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Text(
+              actionLabel,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -227,7 +244,7 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     return result ?? false;
   }
 
-  // ── Detail bottom sheet ─────────────────────────────────────────────
+  // ── Detail bottom sheet (DENGAN BUKTI GAMBAR) ───────────────────────
   void _showDetail(Map<String, dynamic> b) {
     showModalBottomSheet(
       context: context,
@@ -237,9 +254,9 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95, // Ditingkatkan agar scroll gambar lebih nyaman
         expand: false,
         builder: (ctx, sc) => SingleChildScrollView(
           controller: sc,
@@ -247,7 +264,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle bar
               Center(
                 child: Container(
                   width: 40,
@@ -260,15 +276,15 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               ),
               const SizedBox(height: 20),
 
-              // Header
               Row(
                 children: [
                   const Text(
                     'Detail Booking',
                     style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: charcoal),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: charcoal,
+                    ),
                   ),
                   const Spacer(),
                   _statusBadge(b['status']),
@@ -276,44 +292,126 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               ),
               const SizedBox(height: 20),
 
-              // Info rows
-              _detailRow('ID Booking',
-                  b['id']?.toString() ?? '-'),
-              _detailRow('Tiket',
-                  b['ticket_code']?.toString() ?? '-'),
-              _detailRow('User',
-                  b['user']?['fullname'] ??
-                      b['user_id']?.toString() ??
-                      '-'),
-              _detailRow('Email',
-                  b['user']?['email'] ?? '-'),
-              _detailRow('Tanggal Mulai',
-                  _fmtDate(b['startDate'] ?? b['start_date'])),
-              _detailRow('Tanggal Selesai',
-                  _fmtDate(b['endDate'] ?? b['end_date'])),
-              _detailRow('Total Harga',
-                  _fmtRupiah(b['total_price'])),
+              _detailRow('ID Booking', b['id']?.toString() ?? '-'),
+              _detailRow('Tiket', b['ticket_code']?.toString() ?? '-'),
+              _detailRow(
+                'User',
+                b['user']?['fullname'] ?? b['user_id']?.toString() ?? '-',
+              ),
+              _detailRow('Email', b['user']?['email'] ?? '-'),
+              _detailRow(
+                'Tanggal Mulai',
+                _fmtDate(b['startDate'] ?? b['start_date']),
+              ),
+              _detailRow(
+                'Tanggal Selesai',
+                _fmtDate(b['endDate'] ?? b['end_date']),
+              ),
+              _detailRow('Total Harga', _fmtRupiah(b['total_price'])),
               if (b['payment_method'] != null)
-                _detailRow('Metode Bayar',
-                    b['payment_method'].toString()),
+                _detailRow('Metode Bayar', b['payment_method'].toString()),
               if (b['paidAt'] != null)
-                _detailRow('Dibayar Pada',
-                    _fmtDate(b['paidAt'])),
-
-              // Check-in status
+                _detailRow('Dibayar Pada', _fmtDate(b['paidAt'])),
               _detailRow(
                 'Check-in',
                 (b['is_checked_in'] == true)
                     ? 'Sudah check-in${b['checked_in_at'] != null ? ' · ${_fmtDate(b['checked_in_at'])}' : ''}'
                     : 'Belum check-in',
               ),
-
               if (b['created_at'] != null)
                 _detailRow('Dibuat', _fmtDate(b['created_at'])),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // Action buttons
+              // FOKUS: Menampilkan Gambar Bukti Pembayaran
+              const Text(
+                'Bukti Pembayaran',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: charcoal,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FutureBuilder<Map<String, dynamic>>(
+                future: ApiService.getPaymentProof(b['id'].toString()),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(color: teal500),
+                      ),
+                    );
+                  }
+
+                  final res = snapshot.data;
+                  if (res != null &&
+                      res['success'] == true &&
+                      res['payment_proof_url'] != null) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        res['payment_proof_url'],
+                        width: double.infinity,
+                        fit: BoxFit.contain, // Agar gambar tidak terpotong
+                        errorBuilder: (c, e, s) {
+                          debugPrint("Gagal load bukti: $e");
+                          return Container(
+                            height: 150,
+                            color: Colors.grey.shade200,
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.broken_image_rounded,
+                                  color: Colors.grey,
+                                  size: 40,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Gagal memuat gambar',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }
+
+                  // Jika tidak ada bukti / gagal
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Column(
+                      children: [
+                        Icon(
+                          Icons.image_not_supported_rounded,
+                          color: Colors.black26,
+                          size: 40,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Belum ada bukti pembayaran',
+                          style: TextStyle(color: Colors.black38, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
+
               _buildActionButtons(b),
               const SizedBox(height: 16),
             ],
@@ -323,7 +421,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
-  // ── Action buttons berdasarkan status ──────────────────────────────
   Widget _buildActionButtons(Map<String, dynamic> b) {
     final status = (b['status'] ?? '').toString().toUpperCase();
     final id = b['id']?.toString() ?? '';
@@ -339,14 +436,17 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                 _verifyBooking(id);
               },
               icon: const Icon(Icons.verified_outlined),
-              label: const Text('Verifikasi Pembayaran',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              label: const Text(
+                'Verifikasi Pembayaran',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: teal500,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -362,14 +462,16 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               label: Text(
                 'Batalkan',
                 style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.red.shade400),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.red.shade400,
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.red.shade300),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -386,14 +488,16 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               label: Text(
                 'Hapus Booking',
                 style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.red.shade400),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.red.shade400,
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.red.shade300),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -420,7 +524,10 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _fetchHistory,
+            onPressed: () {
+              _searchCtrl.clear();
+              _fetchHistory();
+            },
           ),
         ],
       ),
@@ -428,24 +535,66 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
           ? const Center(child: CircularProgressIndicator(color: teal500))
           : Column(
               children: [
-                // ── Header filter bar ──
+                // ── Header Search & Filter bar ──
                 Container(
                   color: teal500,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                   child: Column(
                     children: [
+                      // FOKUS: Kotak Pencarian
+                      TextField(
+                        controller: _searchCtrl,
+                        onSubmitted: (v) => _fetchHistory(query: v),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Cari kode tiket atau nama user...',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.white70,
+                          ),
+                          suffixIcon: _searchCtrl.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.clear,
+                                    color: Colors.white70,
+                                    size: 18,
+                                  ),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    _fetchHistory();
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.15),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
                       Row(
                         children: [
                           Text(
                             'Total: ${_all.length} booking',
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                           const Spacer(),
                           Text(
                             'Tampil: ${_filtered.length}',
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -471,14 +620,15 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                   child: _filtered.isEmpty
                       ? _buildEmpty()
                       : RefreshIndicator(
-                          onRefresh: _fetchHistory,
+                          onRefresh: () async =>
+                              _fetchHistory(query: _searchCtrl.text),
                           color: teal500,
                           child: ListView.builder(
-                            padding:
-                                const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                             itemCount: _filtered.length,
-                            itemBuilder: (context, i) =>
-                                _buildCard(_filtered[i] as Map<String, dynamic>),
+                            itemBuilder: (context, i) => _buildCard(
+                              _filtered[i] as Map<String, dynamic>,
+                            ),
                           ),
                         ),
                 ),
@@ -487,7 +637,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
-  // ── Filter chip ─────────────────────────────────────────────────────
   Widget _chip(String label, String? status) {
     final selected = _selectedStatus == status;
     return GestureDetector(
@@ -514,12 +663,11 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
-  // ── Card item ───────────────────────────────────────────────────────
+  // (Fungsi _buildCard, _statusBadge, _checkInBadge, _infoChip, _detailRow, _fmtDate, _fmtRupiah, _buildEmpty dibiarkan persis sama dengan kode Anda agar tidak ada desain yang rusak)
   Widget _buildCard(Map<String, dynamic> b) {
     final status = (b['status'] ?? '').toString().toUpperCase();
     final isPendingVerif = status == 'PENDING_VERIFICATION';
     final isCheckedIn = b['is_checked_in'] == true;
-
     return GestureDetector(
       onTap: () => _showDetail(b),
       child: Container(
@@ -543,7 +691,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Row atas: avatar + nama + badge status
               Row(
                 children: [
                   Container(
@@ -553,8 +700,11 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                       color: teal500.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.receipt_long_outlined,
-                        color: teal500, size: 20),
+                    child: const Icon(
+                      Icons.receipt_long_outlined,
+                      color: teal500,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -566,14 +716,17 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
                               b['user_id']?.toString() ??
                               'User',
                           style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: charcoal),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: charcoal,
+                          ),
                         ),
                         Text(
                           'ID: ${b['id']?.toString().substring(0, 8) ?? '-'}...',
                           style: const TextStyle(
-                              fontSize: 11, color: Colors.black38),
+                            fontSize: 11,
+                            color: Colors.black38,
+                          ),
                         ),
                       ],
                     ),
@@ -593,67 +746,71 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
               const SizedBox(height: 10),
               const Divider(height: 1),
               const SizedBox(height: 10),
-
-              // Row bawah: tanggal + harga
               Row(
                 children: [
-                  _infoChip(Icons.calendar_today_outlined,
-                      _fmtDate(b['startDate'] ?? b['start_date'])),
-                  const Text(' → ',
-                      style: TextStyle(color: Colors.black38)),
-                  _infoChip(Icons.calendar_today_outlined,
-                      _fmtDate(b['endDate'] ?? b['end_date'])),
+                  _infoChip(
+                    Icons.calendar_today_outlined,
+                    _fmtDate(b['startDate'] ?? b['start_date']),
+                  ),
+                  const Text(' → ', style: TextStyle(color: Colors.black38)),
+                  _infoChip(
+                    Icons.calendar_today_outlined,
+                    _fmtDate(b['endDate'] ?? b['end_date']),
+                  ),
                   const Spacer(),
                   Text(
                     _fmtRupiah(b['total_price']),
                     style: const TextStyle(
-                        color: teal500,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13),
+                      color: teal500,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
-
-              // Quick action hanya untuk PENDING_VERIFICATION
               if (isPendingVerif) ...[
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () =>
-                            _cancelBooking(b['id'].toString()),
+                        onPressed: () => _cancelBooking(b['id'].toString()),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red.shade400,
                           side: BorderSide(color: Colors.red.shade200),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                        child: const Text('Tolak',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12)),
+                        child: const Text(
+                          'Tolak',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () =>
-                            _verifyBooking(b['id'].toString()),
+                        onPressed: () => _verifyBooking(b['id'].toString()),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: teal500,
                           foregroundColor: Colors.white,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                        child: const Text('Verifikasi',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12)),
+                        child: const Text(
+                          'Verifikasi',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -666,7 +823,6 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
-  // ── Status badge ────────────────────────────────────────────────────
   Widget _statusBadge(dynamic status) {
     final s = (status ?? '').toString().toUpperCase();
     final color = _statusColor[s] ?? Colors.grey;
@@ -679,14 +835,14 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
       child: Text(
         _statusLabel[s] ?? s,
         style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: color),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
 
-  // ── Check-in badge ──────────────────────────────────────────────────
   Widget _checkInBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -697,35 +853,39 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: const [
-          Icon(Icons.door_front_door_outlined,
-              size: 10, color: Color(0xFF2F855A)),
+          Icon(
+            Icons.door_front_door_outlined,
+            size: 10,
+            color: Color(0xFF2F855A),
+          ),
           SizedBox(width: 3),
           Text(
             'Check-in',
             style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF2F855A)),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2F855A),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ── Info chip (ikon + teks kecil) ───────────────────────────────────
   Widget _infoChip(IconData icon, String label) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 11, color: Colors.black38),
         const SizedBox(width: 3),
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: Colors.black54)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.black54),
+        ),
       ],
     );
   }
 
-  // ── Detail row ──────────────────────────────────────────────────────
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -734,17 +894,19 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
         children: [
           SizedBox(
             width: 130,
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 13, color: Colors.black45)),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: Colors.black45),
+            ),
           ),
           Expanded(
             child: Text(
               value,
               style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: charcoal),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: charcoal,
+              ),
             ),
           ),
         ],
@@ -752,14 +914,11 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     );
   }
 
-  // ── Format helpers ──────────────────────────────────────────────────
   String _fmtDate(dynamic val) {
     if (val == null) return '-';
     try {
       final dt = DateTime.parse(val.toString()).toLocal();
-      return '${dt.day.toString().padLeft(2, '0')}/'
-          '${dt.month.toString().padLeft(2, '0')}/'
-          '${dt.year}';
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
     } catch (_) {
       return val.toString();
     }
@@ -779,21 +938,24 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
     return 'Rp ${buf.toString().split('').reversed.join()}';
   }
 
-  // ── Empty state ─────────────────────────────────────────────────────
   Widget _buildEmpty() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined,
-              size: 64, color: Colors.grey.shade300),
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 64,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             'Tidak ada data booking',
             style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade400,
-                fontWeight: FontWeight.w600),
+              fontSize: 16,
+              color: Colors.grey.shade400,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

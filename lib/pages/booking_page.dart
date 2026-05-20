@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async'; // DITAMBAHKAN untuk Timer Debounce
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_2/models/cart_models.dart';
@@ -52,10 +53,20 @@ class _BookingPageState extends State<BookingPage>
   late Animation<double> _fadeAnim;
   late Animation<double> _pulseAnim;
 
+  // State untuk Flow Umum
   bool _isLoading = false;
   bool _isBookingCreated = false;
-  Future<List<dynamic>>? _futureBookings;
 
+  // STATE BARU: Manajemen Data History & Search
+  List<dynamic> _bookings = [];
+  List<dynamic> _filtered = [];
+  bool _loadingHistory = false;
+
+  final _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  Timer? _debounce;
+
+  // Data Spesifik Tiket
   String? _bookingIdFromBackend;
   String? _ticketCodeFromBackend;
   String? _proofUrlFromBackend;
@@ -74,38 +85,85 @@ class _BookingPageState extends State<BookingPage>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
+
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _pulseAnim = Tween<double>(
       begin: 0.96,
       end: 1.04,
     ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+
     _fadeCtrl.forward();
-    if (widget.items.isEmpty) _fetchHistory();
+
+    if (widget.items.isEmpty) {
+      _fetchHistory();
+    }
   }
 
   @override
   void dispose() {
     _fadeCtrl.dispose();
     _pulseCtrl.dispose();
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
   // --- LOGIKA DATA ---
-  void _fetchHistory() {
-    setState(() {
-      _futureBookings = ApiService.getBookings();
+  Future<void> _fetchHistory() async {
+    setState(() => _loadingHistory = true);
+    try {
+      final list = await ApiService.getBookings();
+      if (mounted) {
+        setState(() {
+          _bookings = list;
+          _filtered = list;
+        });
+      }
+    } catch (e) {
+      debugPrint("Gagal fetch history: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _loadingHistory = false);
+      }
+    }
+  }
+
+  // --- LOGIKA PENCARIAN (DEBOUNCE) ---
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      final q = query.trim();
+
+      if (q.isEmpty) {
+        setState(() => _filtered = _bookings);
+        return;
+      }
+
+      setState(() => _loadingHistory = true);
+      // Memanggil endpoint search yang kini sudah aman untuk role User
+      ApiService.searchBookings(q).then((list) {
+        if (mounted) {
+          setState(() {
+            _filtered = list;
+            _loadingHistory = false;
+          });
+        }
+      });
     });
   }
 
   Future<void> _loadPaymentProof(String bId) async {
     final res = await ApiService.getPaymentProof(bId);
-    if (res != null && res['status'] == "success") {
-      final data = res['data'];
-      if (data != null && data['payment_proof_url'] != null) {
+    if (res != null && res['success'] == true) {
+      if (res['payment_proof_url'] != null) {
         setState(() {
-          _proofUrlFromBackend = data['payment_proof_url'];
+          _proofUrlFromBackend = res['payment_proof_url'];
         });
       }
+    } else {
+      debugPrint("Gagal mengambil URL bukti: ${res?['message']}");
     }
   }
 
@@ -189,7 +247,6 @@ class _BookingPageState extends State<BookingPage>
         bannerGrad: [_T.textMuted, Colors.grey.shade400],
       );
     } else {
-      // Default: pending
       return StatusUI(
         label: "MENUNGGU BAYAR",
         actionText: "Bayar Sekarang",
@@ -211,6 +268,7 @@ class _BookingPageState extends State<BookingPage>
           "${widget.tanggalSelesai.year}-${widget.tanggalSelesai.month}-${widget.tanggalSelesai.day}",
     );
     setState(() => _isLoading = false);
+
     if (result != null) {
       setState(() {
         var data = result['data'] ?? result;
@@ -232,16 +290,19 @@ class _BookingPageState extends State<BookingPage>
 
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
     if (pickedFile != null) {
       setState(() {
         _imageProof = File(pickedFile.path);
         _isLoading = true;
       });
+
       final res = await ApiService.uploadPaymentProof(
         bookingId: _bookingIdFromBackend!,
         paymentMethod: 'Transfer Bank',
         imageFile: _imageProof!,
       );
+
       if (!mounted) return;
       setState(() => _isLoading = false);
 
@@ -251,7 +312,6 @@ class _BookingPageState extends State<BookingPage>
 
       if (isSuccess) {
         setState(() {
-          // Update status lokal agar UI berubah menjadi DIPROSES
           _currentStatus = "pending_verification";
         });
         _fetchHistory();
@@ -341,7 +401,7 @@ class _BookingPageState extends State<BookingPage>
   }
 
   // ════════════════════════════════════════════════════════
-  //  TAMPILAN A: DAFTAR RIWAYAT (HISTORY VIEW)
+  //  TAMPILAN A: DAFTAR RIWAYAT DENGAN SEARCH (HISTORY VIEW)
   // ════════════════════════════════════════════════════════
   Widget _buildHistoryView() {
     return CustomScrollView(
@@ -352,30 +412,71 @@ class _BookingPageState extends State<BookingPage>
           title: "Tiket Saya",
           subtitle: "Kelola riwayat pemesanan & akses cepat tiket Anda",
         ),
+
+        // --- SEARCH BAR AREA ---
         SliverToBoxAdapter(
-          child: FutureBuilder<List<dynamic>>(
-            future: _futureBookings,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.only(top: 100),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+            child: TextField(
+              controller: _searchCtrl,
+              focusNode: _searchFocus, // Kunci fokus agar keyboard tidak turun
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: "Cari ID Tiket...",
+                hintStyle: const TextStyle(color: _T.textMuted, fontSize: 14),
+                prefixIcon: const Icon(Icons.search_rounded, color: _T.primary),
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(
+                          Icons.clear_rounded,
+                          color: _T.textMuted,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _T.divider, width: 1.2),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _T.divider, width: 1.2),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _T.primary, width: 1.5),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // --- DAFTAR TIKET ---
+        SliverToBoxAdapter(
+          child: _loadingHistory
+              ? const Padding(
+                  padding: EdgeInsets.only(top: 80),
                   child: Center(
                     child: CircularProgressIndicator(color: _T.primary),
                   ),
-                );
-              }
-              final bookings = snapshot.data ?? [];
-              if (bookings.isEmpty) return _buildEmptyState();
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
-                child: Column(
-                  children: bookings
-                      .map((b) => _buildPremiumHistoryCard(b))
-                      .toList(),
+                )
+              : _filtered.isEmpty
+              ? _buildEmptyState()
+              : Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+                  child: Column(
+                    children: _filtered
+                        .map((b) => _buildPremiumHistoryCard(b))
+                        .toList(),
+                  ),
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
@@ -385,7 +486,6 @@ class _BookingPageState extends State<BookingPage>
   Widget _buildPremiumHistoryCard(Map<String, dynamic> b) {
     final status = b['status']?.toString() ?? 'pending';
     final statusUI = _getStatusUI(status);
-
     final String ticketCode = b['ticket_code'] ?? "TICKET-${b['id'] ?? 'NEW'}";
     final String date = _formatTanggal(b['start_date']?.toString());
     final int price = b['total_price'] ?? 0;
@@ -417,7 +517,6 @@ class _BookingPageState extends State<BookingPage>
               _currentStatus = status;
               _activeTotalFromHistory = price;
             });
-            // Selalu coba muat gambar bukti jika bukan pending biasa
             if (status.toLowerCase() != 'pending') {
               _loadPaymentProof(_bookingIdFromBackend!);
             }
@@ -501,7 +600,6 @@ class _BookingPageState extends State<BookingPage>
                   ],
                 ),
               ),
-
               Stack(
                 children: [
                   SizedBox(
@@ -556,7 +654,6 @@ class _BookingPageState extends State<BookingPage>
                   ),
                 ],
               ),
-
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                 child: Row(
@@ -604,9 +701,7 @@ class _BookingPageState extends State<BookingPage>
   Widget _buildDetailView() {
     final status = _currentStatus?.toLowerCase() ?? 'pending';
     final statusUI = _getStatusUI(status);
-    final bool showUpload =
-        status == 'pending'; // Tombol upload hanya muncul saat pending
-
+    final bool showUpload = status == 'pending';
     final int total = (_isBookingCreated && widget.items.isEmpty)
         ? _activeTotalFromHistory
         : widget.totalHarga;
@@ -636,7 +731,7 @@ class _BookingPageState extends State<BookingPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildModernStatusBanner(statusUI), // Menggunakan helper
+                _buildModernStatusBanner(statusUI),
                 const SizedBox(height: 24),
 
                 if (widget.items.isNotEmpty) ...[
@@ -670,9 +765,7 @@ class _BookingPageState extends State<BookingPage>
                   Icons.cloud_done_rounded,
                 ),
                 const SizedBox(height: 12),
-                _buildModernProofSection(
-                  showUpload,
-                ), // Mengirim parameter boolean showUpload
+                _buildModernProofSection(showUpload),
               ],
             ),
           ),
@@ -1137,8 +1230,9 @@ class _BookingPageState extends State<BookingPage>
 
   // --- FLOATING BOTTOM NAVIGATION BAR ---
   Widget? _buildBottomBar() {
-    if (_isBookingCreated || (widget.items.isEmpty && !_isBookingCreated))
+    if (_isBookingCreated || (widget.items.isEmpty && !_isBookingCreated)) {
       return null;
+    }
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1259,18 +1353,22 @@ class _BookingPageState extends State<BookingPage>
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              "Belum Ada Transaksi",
-              style: TextStyle(
+            Text(
+              _searchCtrl.text.isNotEmpty
+                  ? "Tiket Tidak Ditemukan"
+                  : "Belum Ada Transaksi",
+              style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 color: _T.textHead,
                 fontSize: 16,
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              "Tiket pesanan Anda akan muncul di sini",
-              style: TextStyle(color: _T.textBody, fontSize: 13),
+            Text(
+              _searchCtrl.text.isNotEmpty
+                  ? "Pastikan kode pencarian Anda sudah benar"
+                  : "Tiket pesanan Anda akan muncul di sini",
+              style: const TextStyle(color: _T.textBody, fontSize: 13),
             ),
           ],
         ),
