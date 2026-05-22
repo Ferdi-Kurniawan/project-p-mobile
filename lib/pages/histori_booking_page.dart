@@ -21,6 +21,8 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
   List<dynamic> _filtered = [];
   bool _loading = false;
 
+  String? _proofUrlFromBackend;
+  bool _isLoadingProof = false; 
   String? _selectedStatus;
 
   // FOKUS: Controller untuk Search Bar
@@ -72,6 +74,29 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
       });
     } finally {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadPaymentProof(String bId, StateSetter sheetSetState) async {
+    // Tampilkan loading di dalam Bottom Sheet
+    sheetSetState(() => _isLoadingProof = true); 
+
+    final res = await ApiService.getPaymentProof(bId);
+    if (res != null && res['success'] == true) {
+      if (res['payment_proof_url'] != null) {
+        // Update state utama
+        setState(() {
+          _proofUrlFromBackend = res['payment_proof_url'];
+        });
+        // Update state khusus Bottom Sheet agar gambar muncul
+        sheetSetState(() {
+          _proofUrlFromBackend = res['payment_proof_url'];
+          _isLoadingProof = false;
+        });
+      }
+    } else {
+      debugPrint("Gagal mengambil URL bukti: ${res['message']}");
+      sheetSetState(() => _isLoadingProof = false);
     }
   }
 
@@ -245,7 +270,11 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
   }
 
   // ── Detail bottom sheet (DENGAN BUKTI GAMBAR) ───────────────────────
-  void _showDetail(Map<String, dynamic> b) {
+ void _showDetail(Map<String, dynamic> b) {
+    // Reset state setiap kali detail baru dibuka agar tidak membawa data sebelumnya
+    _proofUrlFromBackend = null;
+    _isLoadingProof = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -253,174 +282,181 @@ class _HistoriBookingPageState extends State<HistoriBookingPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95, // Ditingkatkan agar scroll gambar lebih nyaman
-        expand: false,
-        builder: (ctx, sc) => SingleChildScrollView(
-          controller: sc,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              Row(
+      // WAJIB: Menggunakan StatefulBuilder agar Bottom Sheet bisa mendeteksi perubahan data gambar
+      builder: (ctx) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter sheetSetState) {
+          return DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            minChildSize: 0.5,
+            maxChildSize: 0.95, // Ditingkatkan agar scroll gambar lebih nyaman
+            expand: false,
+            builder: (ctx, sc) => SingleChildScrollView(
+              controller: sc,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Row(
+                    children: [
+                      const Text(
+                        'Detail Booking',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: charcoal,
+                        ),
+                      ),
+                      const Spacer(),
+                      _statusBadge(b['status']),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  _detailRow('ID Booking', b['id']?.toString() ?? '-'),
+                  _detailRow('Tiket', b['ticket_code']?.toString() ?? '-'),
+                  _detailRow(
+                    'User',
+                    b['user']?['fullname'] ?? b['user_id']?.toString() ?? '-',
+                  ),
+                  _detailRow('Email', b['user']?['email'] ?? '-'),
+                  _detailRow(
+                    'Tanggal Mulai',
+                    _fmtDate(b['startDate'] ?? b['start_date']),
+                  ),
+                  _detailRow(
+                    'Tanggal Selesai',
+                    _fmtDate(b['endDate'] ?? b['end_date']),
+                  ),
+                  _detailRow('Total Harga', _fmtRupiah(b['total_price'])),
+                  if (b['payment_method'] != null)
+                    _detailRow('Metode Bayar', b['payment_method'].toString()),
+                  if (b['paidAt'] != null)
+                    _detailRow('Dibayar Pada', _fmtDate(b['paidAt'])),
+                  _detailRow(
+                    'Check-in',
+                    (b['is_checked_in'] == true)
+                        ? 'Sudah check-in${b['checked_in_at'] != null ? ' · ${_fmtDate(b['checked_in_at'])}' : ''}'
+                        : 'Belum check-in',
+                  ),
+                  if (b['created_at'] != null)
+                    _detailRow('Dibuat', _fmtDate(b['created_at'])),
+
+                  const SizedBox(height: 24),
+
+                  // =========================================================
+                  // IMPLEMENTASI BARU: LOGIKA MANUALLY TRIGGER UTK GAMBAR BUKTI
+                  // =========================================================
                   const Text(
-                    'Detail Booking',
+                    'Bukti Pembayaran',
                     style: TextStyle(
-                      fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: charcoal,
+                      fontSize: 15,
                     ),
                   ),
-                  const Spacer(),
-                  _statusBadge(b['status']),
+                  const SizedBox(height: 12),
+                  
+                  _proofUrlFromBackend != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            _proofUrlFromBackend!,
+                            width: double.infinity,
+                            fit: BoxFit.cover, 
+                            loadingBuilder: (c, child, progress) => progress == null
+                                ? child
+                                : Container(
+                                    height: 150,
+                                    color: Colors.grey.shade50,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(color: teal500),
+                                    ),
+                                  ),
+                            errorBuilder: (c, e, s) {
+                              debugPrint("Gagal load bukti: $e");
+                              return Container(
+                                height: 150,
+                                color: Colors.grey.shade200,
+                                child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.broken_image_rounded, color: Colors.grey, size: 40),
+                                    SizedBox(height: 8),
+                                    Text('Gagal memuat gambar', style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : _isLoadingProof
+                          ? Container(
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Center(
+                                child: CircularProgressIndicator(color: teal500),
+                              ),
+                            )
+                          : SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  // 1. Set loading lokal khusus untuk Bottom Sheet
+                                  sheetSetState(() {
+                                    _isLoadingProof = true;
+                                  });
+                                  
+                                  // 2. Panggil fungsi _loadPaymentProof bawaan kamu
+                                  await _loadPaymentProof(b['id'].toString(), sheetSetState);
+                                  
+                                  // 3. Matikan loading lokal & render ulang Bottom Sheet untuk memunculkan gambar
+                                  sheetSetState(() {
+                                    _isLoadingProof = false;
+                                  });
+                                },
+                                icon: const Icon(Icons.image_search_rounded, color: teal500),
+                                label: const Text(
+                                  'Tampilkan Bukti Pembayaran',
+                                  style: TextStyle(color: teal500, fontWeight: FontWeight.w600),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: teal500),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                  // =========================================================
+
+                  const SizedBox(height: 32),
+
+                  _buildActionButtons(b),
+                  const SizedBox(height: 16),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              _detailRow('ID Booking', b['id']?.toString() ?? '-'),
-              _detailRow('Tiket', b['ticket_code']?.toString() ?? '-'),
-              _detailRow(
-                'User',
-                b['user']?['fullname'] ?? b['user_id']?.toString() ?? '-',
-              ),
-              _detailRow('Email', b['user']?['email'] ?? '-'),
-              _detailRow(
-                'Tanggal Mulai',
-                _fmtDate(b['startDate'] ?? b['start_date']),
-              ),
-              _detailRow(
-                'Tanggal Selesai',
-                _fmtDate(b['endDate'] ?? b['end_date']),
-              ),
-              _detailRow('Total Harga', _fmtRupiah(b['total_price'])),
-              if (b['payment_method'] != null)
-                _detailRow('Metode Bayar', b['payment_method'].toString()),
-              if (b['paidAt'] != null)
-                _detailRow('Dibayar Pada', _fmtDate(b['paidAt'])),
-              _detailRow(
-                'Check-in',
-                (b['is_checked_in'] == true)
-                    ? 'Sudah check-in${b['checked_in_at'] != null ? ' · ${_fmtDate(b['checked_in_at'])}' : ''}'
-                    : 'Belum check-in',
-              ),
-              if (b['created_at'] != null)
-                _detailRow('Dibuat', _fmtDate(b['created_at'])),
-
-              const SizedBox(height: 24),
-
-              // FOKUS: Menampilkan Gambar Bukti Pembayaran
-              const Text(
-                'Bukti Pembayaran',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: charcoal,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 12),
-              FutureBuilder<Map<String, dynamic>>(
-                future: ApiService.getPaymentProof(b['id'].toString()),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Container(
-                      height: 150,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Center(
-                        child: CircularProgressIndicator(color: teal500),
-                      ),
-                    );
-                  }
-
-                  final res = snapshot.data;
-                  if (res != null &&
-                      res['success'] == true &&
-                      res['payment_proof_url'] != null) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        res['payment_proof_url'],
-                        width: double.infinity,
-                        fit: BoxFit.contain, // Agar gambar tidak terpotong
-                        errorBuilder: (c, e, s) {
-                          debugPrint("Gagal load bukti: $e");
-                          return Container(
-                            height: 150,
-                            color: Colors.grey.shade200,
-                            child: const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.broken_image_rounded,
-                                  color: Colors.grey,
-                                  size: 40,
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Gagal memuat gambar',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }
-
-                  // Jika tidak ada bukti / gagal
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Column(
-                      children: [
-                        Icon(
-                          Icons.image_not_supported_rounded,
-                          color: Colors.black26,
-                          size: 40,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Belum ada bukti pembayaran',
-                          style: TextStyle(color: Colors.black38, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 32),
-
-              _buildActionButtons(b),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
-
   Widget _buildActionButtons(Map<String, dynamic> b) {
     final status = (b['status'] ?? '').toString().toUpperCase();
     final id = b['id']?.toString() ?? '';

@@ -179,30 +179,51 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     },
   ];
 
-  final List<Map<String, dynamic>> _promoCards = [
+  final List<Map<String, dynamic>> _tipCards = [
     {
-      'tag': 'PROMO SPESIAL',
-      'title': 'Diskon 20%\ntiket wisata alam',
-      'btnLabel': 'Klaim',
-      'colors': [Color(0xFF00B09B), Color(0xFF00D2B4)],
-      'btnColor': _T.primary,
-      'icon': '🌿',
+      'icon': Icons.wb_sunny_rounded,
+      'title': 'Waktu Terbaik Berkunjung',
+      'tag': 'PERSIAPAN',
+      'tagColor': Color(0xFF00A86B),
+      'tagBg': Color(0xFFE0F8EF),
+      'detail':
+          'Waktu terbaik mengunjungi destinasi wisata alam adalah pagi hari pukul 06.00–09.00. Udara masih segar, cahaya matahari bagus untuk foto, dan belum terlalu ramai. Hindari berkunjung saat musim hujan (November–Februari) agar jalur wisata tidak licin.',
     },
     {
-      'tag': 'WEEKEND DEAL',
-      'title': 'Beli 2 tiket pantai\ngratis 1 tiket',
-      'btnLabel': 'Klaim',
-      'colors': [Color(0xFF007A6A), Color(0xFF00B09B)],
-      'btnColor': _T.primaryDark,
-      'icon': '🏖️',
+      'icon': Icons.backpack_rounded,
+      'title': 'Perlengkapan Wajib Dibawa',
+      'tag': 'TIPS',
+      'tagColor': Color(0xFF00A86B),
+      'tagBg': Color(0xFFE0F8EF),
+      'detail':
+          'Selalu bawa: sunscreen SPF 30+, topi atau payung lipat, botol air minum (minimal 1 liter), obat-obatan pribadi, power bank, dan jas hujan ringan. Untuk wisata pantai tambahkan sandal gunung dan kantong plastik untuk barang berharga.',
     },
     {
-      'tag': 'FLASH SALE',
-      'title': 'Cashback Rp15rb\nmin. transaksi Rp50rb',
-      'btnLabel': 'Klaim',
-      'colors': [Color(0xFFFF6B35), Color(0xFFFF9A6B)],
-      'btnColor': _T.accent,
-      'icon': '⚡',
+      'icon': Icons.camera_alt_rounded,
+      'title': 'Foto Kece di Wisata Alam',
+      'tag': 'FOTOGRAFI',
+      'tagColor': Color(0xFF00A86B),
+      'tagBg': Color(0xFFE0F8EF),
+      'detail':
+          'Gunakan mode portrait untuk foto close-up pemandangan. Manfaatkan "golden hour" (1 jam setelah matahari terbit atau sebelum terbenam) untuk cahaya yang dramatis. Aktifkan grid kamera untuk komposisi rule of thirds agar foto lebih profesional.',
+    },
+    {
+      'icon': Icons.savings_rounded,
+      'title': 'Hemat Budget Wisata',
+      'tag': 'HEMAT',
+      'tagColor': Color(0xFF00A86B),
+      'tagBg': Color(0xFFE0F8EF),
+      'detail':
+          'Beli tiket via aplikasi ini untuk harga terbaik. Datang di hari kerja (Senin–Kamis) karena lebih sepi dan kadang ada harga weekday. Bawa bekal makanan sendiri untuk menghemat pengeluaran di lokasi. Manfaatkan promo bundling tiket keluarga.',
+    },
+    {
+      'icon': Icons.directions_car_rounded,
+      'title': 'Tips Transportasi & Parkir',
+      'tag': 'TRANSPORTASI',
+      'tagColor': Color(0xFF00A86B),
+      'tagBg': Color(0xFFE0F8EF),
+      'detail':
+          'Untuk wisata di Lampung, gunakan kendaraan pribadi atau sewa mobil agar lebih fleksibel. Datang lebih awal (sebelum pukul 08.00) untuk mendapat parkir dekat pintu masuk. Beberapa lokasi memiliki shuttle dari area parkir utama, tanyakan ke petugas.',
     },
   ];
 
@@ -541,99 +562,39 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   right: 18,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Logo + Brand
-                      Row(
+                      // Logo + App Name
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.22),
-                              borderRadius: BorderRadius.circular(13),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.40),
-                                width: 1.3,
-                              ),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                "🏝️",
-                                style: TextStyle(fontSize: 21),
-                              ),
-                            ),
+                          Image.asset(
+                            'assets/images/logo.png',
+                            height: 80,
+                            fit: BoxFit.contain,
                           ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Trip Nusa Desa",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.3,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black38,
-                                      blurRadius: 8,
-                                    ),
-                                  ],
+                          const Text(
+                            'Trip Nusa Desa',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.6,
+                              height: 1.0,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black38,
+                                  blurRadius: 10,
+                                  offset: Offset(0, 2),
                                 ),
-                              ),
-                              Text(
-                                "Jelajahi Desa & Alam",
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.80),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                              ],
+                              fontFamily: null, // uses default Material font
+                            ),
                           ),
                         ],
                       ),
                     ],
-                  ),
-                ),
-
-                // ── Location chip ──
-                Positioned(
-                  top: 68,
-                  left: 18,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.20),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.35),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.location_on_rounded,
-                          color: Color(0xFFFFE082),
-                          size: 13,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          "Lampung, Indonesia",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.95),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
 
@@ -665,31 +626,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 400),
-                        transitionBuilder: (child, anim) => FadeTransition(
-                          opacity: anim,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.3),
-                              end: Offset.zero,
-                            ).animate(anim),
-                            child: child,
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: Color(0xFFFFE082),
+                            size: 14,
                           ),
-                        ),
-                        child: Text(
-                          "📍  ${_heroSubtitles[_heroPage]}",
-                          key: ValueKey(_heroPage),
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.90),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 0.1,
-                            shadows: const [
-                              Shadow(color: Colors.black38, blurRadius: 6),
-                            ],
+                          const SizedBox(width: 4),
+                          Text(
+                            "Bandar Lampung, Lampung",
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.90),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       const SizedBox(height: 14),
                       // Dot indicators
@@ -856,9 +809,33 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   // ══════════════════════════════════════════════════════
-  //  STATS BAR — teal accent numbers
+  //  STATS BAR — icon card style
   // ══════════════════════════════════════════════════════
   Widget _buildStatsBar() {
+    final List<Map<String, dynamic>> statItems = [
+      {
+        'value': '3',
+        'label': 'Destinasi',
+        'icon': Icons.map_rounded,
+        'color': _T.primary,
+        'bg': _T.primarySurface,
+      },
+      {
+        'value': '10rb+',
+        'label': 'Wisatawan',
+        'icon': Icons.people_rounded,
+        'color': const Color(0xFF00A86B),
+        'bg': const Color(0xFFE0F8EF),
+      },
+      {
+        'value': '4.9',
+        'label': 'Rating',
+        'icon': Icons.star_rounded,
+        'color': const Color(0xFFFBBF24),
+        'bg': const Color(0xFFFFFBEB),
+      },
+    ];
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 36, 20, 20),
       child: TweenAnimationBuilder<double>(
@@ -872,269 +849,299 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: child,
           ),
         ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          decoration: BoxDecoration(
-            color: _T.bgCard,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: _T.divider, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: _T.primary.withOpacity(0.10),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: _stats.asMap().entries.map((entry) {
-              final i = entry.key;
-              final stat = entry.value;
-              return Row(
-                children: [
-                  Column(
-                    children: [
-                      ShaderMask(
-                        shaderCallback: (r) => const LinearGradient(
-                          colors: _T.headerGrad,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ).createShader(r),
-                        child: Text(
-                          stat['value']!,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        stat['label']!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: _T.textBody,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (i < _stats.length - 1)
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 22),
-                      width: 1,
-                      height: 34,
-                      color: _T.divider,
+        child: Row(
+          children: statItems.asMap().entries.map((entry) {
+            final i = entry.key;
+            final stat = entry.value;
+            return Expanded(
+              child: Container(
+                margin: EdgeInsets.only(right: i < statItems.length - 1 ? 12 : 0),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: _T.bgCard,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _T.divider, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (stat['color'] as Color).withOpacity(0.10),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
                     ),
-                ],
-              );
-            }).toList(),
-          ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: stat['bg'] as Color,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        stat['icon'] as IconData,
+                        color: stat['color'] as Color,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ShaderMask(
+                      shaderCallback: (r) => LinearGradient(
+                        colors: [stat['color'] as Color, (stat['color'] as Color).withOpacity(0.7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ).createShader(r),
+                      child: Text(
+                        stat['value'] as String,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      stat['label'] as String,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: _T.textBody,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  //  PROMO CARDS
+  //  TIPS & TRICKS SECTION
   // ══════════════════════════════════════════════════════
   Widget _buildPromoCards() {
+    const tipColor = Color(0xFF00A86B);
+    const tipBg = Color(0xFFE0F8EF);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Section header
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: _T.headerGrad,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Tips & Trik Berwisata",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: _T.textHead,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              const Icon(
+                Icons.lightbulb_rounded,
+                color: Color(0xFF00A86B),
+                size: 18,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // List rows with divider
+          ..._tipCards.asMap().entries.map((entry) {
+            final i = entry.key;
+            final tip = entry.value;
+            return Column(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: _T.headerGrad,
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
+                GestureDetector(
+                  onTap: () => _showTipPopup(context, tip),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    child: Row(
+                      children: [
+                        // Icon badge
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: tipBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            tip['icon'] as IconData,
+                            color: tipColor,
+                            size: 22,
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                        const SizedBox(width: 14),
+                        // Title + tag
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                tip['title'] as String,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: _T.textHead,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                tip['tag'] as String,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: tipColor,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Chevron
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: tipBg,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: const Icon(
+                            Icons.chevron_right_rounded,
+                            color: tipColor,
+                            size: 18,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      "Penawaran Spesial",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: _T.textHead,
-                        letterSpacing: -0.2,
-                      ),
+                  ),
+                ),
+                if (i < _tipCards.length - 1)
+                  const Divider(height: 1, thickness: 1, color: _T.divider),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showTipPopup(BuildContext context, Map<String, dynamic> tip) {
+    final tagColor = tip['tagColor'] as Color;
+    final tagBg = tip['tagBg'] as Color;
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'tip_popup',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 280),
+      transitionBuilder: (_, anim, __, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: anim, child: child),
+        );
+      },
+      pageBuilder: (context, _, __) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: tagColor.withOpacity(0.22),
+                      blurRadius: 40,
+                      offset: const Offset(0, 16),
                     ),
                   ],
                 ),
-                Text(
-                  "Lihat semua",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: _T.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 148,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: _promoCards.length,
-              itemBuilder: (context, i) {
-                final card = _promoCards[i];
-                final colors = card['colors'] as List<Color>;
-                return Container(
-                  width: 220,
-                  margin: EdgeInsets.only(
-                    right: i < _promoCards.length - 1 ? 14 : 0,
-                  ),
-                  child: Material(
-                    borderRadius: BorderRadius.circular(22),
-                    clipBehavior: Clip.antiAlias,
-                    child: Container(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header strip
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: colors,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        color: tagBg,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(28),
+                          topRight: Radius.circular(28),
                         ),
                       ),
-                      child: Stack(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Decorative circle TL
-                          Positioned(
-                            top: -24,
-                            right: -18,
-                            child: Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.10),
-                              ),
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: tagColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              tip['icon'] as IconData,
+                              color: tagColor,
+                              size: 26,
                             ),
                           ),
-                          // Decorative circle BR
-                          Positioned(
-                            left: -16,
-                            bottom: -24,
-                            child: Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.07),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.25),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          card['tag'] as String,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 1.0,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        card['title'] as String,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          height: 1.35,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 7,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.12,
-                                              ),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Text(
-                                          card['btnLabel'] as String,
-                                          style: TextStyle(
-                                            color: card['btnColor'] as Color,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: tagColor.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    tip['tag'] as String,
+                                    style: TextStyle(
+                                      color: tagColor,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(height: 6),
                                 Text(
-                                  card['icon'] as String,
-                                  style: TextStyle(
-                                    fontSize: 42,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black.withOpacity(0.18),
-                                        blurRadius: 12,
-                                        offset: const Offset(2, 4),
-                                      ),
-                                    ],
+                                  tip['title'] as String,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: _T.textHead,
+                                    height: 1.25,
                                   ),
                                 ),
                               ],
@@ -1143,13 +1150,61 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ],
                       ),
                     ),
-                  ),
-                );
-              },
+                    // Body
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        tip['detail'] as String,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          color: _T.textBody,
+                          height: 1.65,
+                        ),
+                      ),
+                    ),
+                    // Close button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [tagColor, tagColor.withOpacity(0.75)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: tagColor.withOpacity(0.28),
+                                blurRadius: 12,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Text(
+                              "Mengerti, Siap Berwisata! 🙌",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

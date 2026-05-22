@@ -295,34 +295,36 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildTopHeader() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.10),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.5)),
-          ),
-          child: const Icon(
-            Icons.person_add_alt_1_rounded,
-            size: 40,
-            color: tealDeep,
+     return Column(
+    children: [
+      Container(
+        width: 90,
+        height: 90,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.10),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.5)),
+        ),
+        alignment: Alignment.center, // jarak logo dari tepi lingkaran
+          child: Image.asset(
+            'assets/images/logo.png', // pastikan sudah PNG transparan
+            fit: BoxFit.contain,
           ),
         ),
-        const SizedBox(height: 12),
-        const Text(
-          "TRIP NUSA DESA",
-          style: TextStyle(
-            color: Colors.white,
-            letterSpacing: 6,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
+    
+      const SizedBox(height: 12),
+      const Text(
+        "TRIP NUSA DESA",
+        style: TextStyle(
+          color: Colors.white,
+          letterSpacing: 6,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildGlassInput({
     required TextEditingController controller,

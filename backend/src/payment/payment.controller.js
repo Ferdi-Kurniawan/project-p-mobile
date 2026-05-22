@@ -58,20 +58,12 @@ const updatePayment = async (req, res, next) => {
 const getPaymentProof = async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const userId = req.session.user.id;
 
     const booking = await bookingRepository.getBookingById(bookingId);
     if (!booking) {
       return res.status(404).json({
         status: "error",
         message: "Booking tidak ditemukan.",
-      });
-    }
-
-    if (booking.user_id !== userId) {
-      return res.status(403).json({
-        status: "error",
-        message: "Anda tidak memiliki akses ke pembayaran ini.",
       });
     }
 
